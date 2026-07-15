@@ -49,6 +49,7 @@ async function loadIterationView() {
     <p class="muted">${currentIsSet ? 'Read-only decision record.' : 'Editable exploration workspace.'}</p>
     <h3>Opportunities</h3><ul>${current.opportunities.map(item => `<li>${item.title}</li>`).join('')}</ul>
     ${rankingMarkup(workspace.ranking)}
+    ${currentIsSet ? '' : `<section><h3>AI review suggestions</h3><p class="muted">Suggestions are drafts only; they never change this Workspace until you choose an action.</p><button id="ai-suggestions">Generate review suggestions</button><div id="ai-suggestion-results"></div></section>`}
     ${currentIsSet ? `<form id="next-iteration-form"><h3>Start a new Iteration</h3><label>What changed <textarea name="what_changed" required></textarea></label><label>Name (optional) <input name="custom_name"></label><button type="submit">Start draft</button></form>` : `${carryForwardMarkup(current)}<form id="set-iteration-form">
       <h3>Set this Iteration</h3>
       <label>Next Opportunity <select name="next_opportunity_id">${current.shortlist.map(id => `<option value="${id}">${current.opportunities.find(item => item.id === id)?.title || id}</option>`).join('')}</select></label>
@@ -79,6 +80,12 @@ async function loadIterationView() {
   document.querySelectorAll('[data-restore]').forEach(button => button.addEventListener('click', async () => {
     await post('/api/workspace/restore', {opportunity_id: button.dataset.restore}); loadIterationView();
   }));
+  document.querySelector('#ai-suggestions')?.addEventListener('click', async () => {
+    const suggestions = await post('/api/ai/suggestions', {});
+    document.querySelector('#ai-suggestion-results').innerHTML = `<p><strong>Draft candidate:</strong> ${suggestions.candidates[0].title}<br><span class="muted">Assumptions: ${suggestions.candidates[0].assumptions.join(' ')} Uncertainties: ${suggestions.candidates[0].uncertainties.join(' ')}</span><br><button id="accept-ai-candidate">Add this candidate</button></p><p><strong>Suggested weights</strong> <button id="apply-ai-weights" title="${suggestions.weight_suggestion.map(item => item.rationale).join(' ')}">Apply proposed weights</button></p><p class="muted">${suggestions.trade_offs}</p>`;
+    document.querySelector('#accept-ai-candidate').addEventListener('click', async () => { await post('/api/workspace/opportunities', {opportunity: suggestions.candidates[0]}); loadIterationView(); });
+    document.querySelector('#apply-ai-weights').addEventListener('click', async () => { await post('/api/workspace/apply-suggested-weights', {weights: suggestions.weight_suggestion}); loadIterationView(); });
+  });
   bindDecisionFrameEditor();
 }
 

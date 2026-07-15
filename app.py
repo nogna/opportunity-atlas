@@ -14,6 +14,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from collaboration import Collaboration, FieldLockedError
+from ai_suggestions import apply_suggested_weights, suggest_for_iteration
 from ranking import default_rubric, validate_rubric
 from workspace import Workspace
 
@@ -224,6 +225,18 @@ class AppHandler(SimpleHTTPRequestHandler):
                 dimensions = payload["dimensions"]
                 validate_rubric(dimensions)
                 workspace.current_iteration.dimensions = dimensions
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/ai/suggestions":
+                return self.send_json(HTTPStatus.OK, suggest_for_iteration(load_workspace().current_iteration))
+            if self.path == "/api/workspace/opportunities":
+                workspace = load_workspace()
+                opportunity = workspace.add_opportunity(payload["opportunity"])
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.CREATED, {"opportunity": opportunity})
+            if self.path == "/api/workspace/apply-suggested-weights":
+                workspace = load_workspace()
+                apply_suggested_weights(workspace.current_iteration, payload["weights"])
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
             if self.path == "/api/workspace/archive":

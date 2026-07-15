@@ -276,6 +276,17 @@ class Workspace:
         current.custom_name = custom_name.strip() if custom_name else None
         return current
 
+    def add_opportunity(self, opportunity: dict) -> dict:
+        current = self.current_iteration
+        if not current.is_editable:
+            raise ValueError("A set Iteration cannot be changed.")
+        if not opportunity.get("id") or not opportunity.get("title"):
+            raise ValueError("An Opportunity needs an id and title.")
+        if any(item["id"] == opportunity["id"] for item in current.opportunities):
+            raise ValueError("An Opportunity with this id already exists.")
+        current.opportunities.append(deepcopy(opportunity))
+        return current.opportunities[-1]
+
     def to_dict(self) -> dict:
         return {"iterations": [asdict(iteration) for iteration in self.iterations]}
 

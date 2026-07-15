@@ -12,9 +12,12 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from workspace import Workspace
+
 ROOT = Path(__file__).parent
 STATIC = ROOT / "static"
 DATA = ROOT / "data" / "portfolio.json"
+WORKSPACE_DATA = ROOT / "data" / "workspace.json"
 
 DEFAULT_PORTFOLIO = {
     "workspace": {
@@ -41,6 +44,26 @@ DEFAULT_PORTFOLIO = {
     "decision": {"selected_id": "ticket-triage", "rationale": "Prioritize support ticket signal triage: it combines a high-volume pain with available data and a clear human review point."},
 }
 
+DEFAULT_WORKSPACE = Workspace.start(
+    decision_frame={
+        "goal": "Improve customer response quality while protecting specialist time.",
+        "decision": "Choose the next AI workflow to pursue.",
+    },
+    opportunities=[
+        {"id": "ticket-triage", "title": "Support ticket signal triage"},
+        {"id": "renewal-brief", "title": "Renewal preparation brief"},
+    ],
+    dimensions=[
+        {"id": "value", "name": "Expected value", "weight": 50},
+        {"id": "readiness", "name": "Data readiness", "weight": 50},
+    ],
+    assessments={
+        "ticket-triage": {"value": 5, "readiness": 4},
+        "renewal-brief": {"value": 4, "readiness": 3},
+    },
+    shortlist=["ticket-triage", "renewal-brief"],
+)
+
 
 def load_portfolio():
     if not DATA.exists():
@@ -52,6 +75,17 @@ def load_portfolio():
 def save_portfolio(portfolio):
     DATA.parent.mkdir(parents=True, exist_ok=True)
     DATA.write_text(json.dumps(portfolio, indent=2), encoding="utf-8")
+
+
+def load_workspace():
+    if not WORKSPACE_DATA.exists():
+        save_workspace(DEFAULT_WORKSPACE)
+    return Workspace.from_dict(json.loads(WORKSPACE_DATA.read_text(encoding="utf-8")))
+
+
+def save_workspace(workspace):
+    WORKSPACE_DATA.parent.mkdir(parents=True, exist_ok=True)
+    WORKSPACE_DATA.write_text(json.dumps(workspace.to_dict(), indent=2), encoding="utf-8")
 
 
 def clean_portfolio(payload):
@@ -112,6 +146,8 @@ class AppHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/portfolio":
             return self.send_json(HTTPStatus.OK, load_portfolio())
+        if self.path == "/api/workspace":
+            return self.send_json(HTTPStatus.OK, load_workspace().to_dict())
         return super().do_GET()
 
     def do_POST(self):
@@ -121,6 +157,15 @@ class AppHandler(SimpleHTTPRequestHandler):
                 portfolio = clean_portfolio(payload)
                 save_portfolio(portfolio)
                 return self.send_json(HTTPStatus.OK, portfolio)
+            if self.path == "/api/workspace/decision":
+                workspace = load_workspace()
+                iteration = workspace.set_current_iteration(
+                    next_opportunity_id=payload["next_opportunity_id"],
+                    rationale=payload["rationale"],
+                    recorded_by=payload["recorded_by"],
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, {"iteration": iteration.__dict__})
             if self.path == "/api/assist":
                 portfolio = load_portfolio()
                 use_case = next((item for item in portfolio["use_cases"] if item["id"] == payload.get("id")), None)

@@ -2,7 +2,9 @@
 
 ### Issue tracker
 
-Issues are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+GitHub Issues are the source of truth for active work; `.scratch/` holds supporting specs and research only. See `docs/agents/issue-tracker.md`.
+
+Keep the GitHub issue tracker current throughout every workflow: create and link a discovery, research, grilling, prototype, or implementation issue before starting independently actionable work; record material decisions and dependency/status changes in its conversation; and close it only after its acceptance criteria are complete. Do not advance from discovery/prototype work to implementation without an explicit user decision recorded in the relevant issue.
 
 ### Triage labels
 

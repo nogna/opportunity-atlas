@@ -3,17 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Opportunity Atlas — Iterations</title>
+  <title>Opportunity Atlas — Map</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <main class="iteration-page">
-    <p class="eyebrow">OPPORTUNITY ATLAS</p>
-    <h1>Decision Iterations</h1>
-    <p class="subhead">One live draft, with completed decisions preserved as read-only history.</p>
-    <section class="panel" id="current-iteration"></section>
-    <section class="panel"><p class="eyebrow">HISTORY</p><div id="iteration-history"></div></section>
-  </main>
+<body class="map-page">
+  <header class="map-header">
+    <a class="wordmark" href="/">Opportunity Atlas</a>
+    <span class="save-indicator" id="save-status" aria-live="polite">Saved</span>
+  </header>
+  <main class="map-main" id="map-app" aria-live="polite"></main>
+  <dialog class="island-dialog" id="island-dialog"></dialog>
   <script src="iteration.js"></script>
 </body>
 </html>

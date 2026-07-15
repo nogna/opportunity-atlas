@@ -9,6 +9,14 @@ from datetime import datetime, timezone
 from ranking import rank_opportunities
 
 
+_ATLAS_MAP_NAMES = (
+    "The Amber Current",
+    "The Saffron Passage",
+    "The Meridian Isles",
+    "The Starlit Sound",
+)
+
+
 @dataclass
 class Iteration:
     number: int
@@ -25,10 +33,17 @@ class Iteration:
     decision_snapshot: dict | None = None
     archive_decisions: list[dict] = field(default_factory=list)
     inherited_opportunities: dict[str, dict] = field(default_factory=dict)
+    # ``decision_frame.goal`` is retained only to read older persisted data.
+    map_focus: str | None = None
 
     @property
     def name(self) -> str:
-        return self.custom_name or f"Iteration {self.number}"
+        return self.custom_name or _ATLAS_MAP_NAMES[(self.number - 1) % len(_ATLAS_MAP_NAMES)]
+
+    @property
+    def north_star(self) -> str | None:
+        """Read-only strategy context for the Map, not Map-owned data."""
+        return self.decision_frame.get("strategy")
 
     @property
     def is_set(self) -> bool:
@@ -47,23 +62,27 @@ class Workspace:
     def start(
         cls,
         *,
-        decision_frame: dict,
+        decision_frame: dict | None = None,
         opportunities: list[dict],
         dimensions: list[dict],
         assessments: dict,
         shortlist: list[str] | None = None,
         custom_name: str | None = None,
+        map_focus: str | None = None,
     ) -> "Workspace":
+        frame = deepcopy(decision_frame or {})
+        focus = map_focus if map_focus is not None else frame.get("goal")
         return cls(
             iterations=[
                 Iteration(
                     number=1,
-                    decision_frame=deepcopy(decision_frame),
+                    decision_frame=frame,
                     opportunities=deepcopy(opportunities),
                     dimensions=deepcopy(dimensions),
                     assessments=deepcopy(assessments),
                     shortlist=deepcopy(shortlist or []),
                     custom_name=custom_name,
+                    map_focus=focus,
                 )
             ]
         )
@@ -135,6 +154,7 @@ class Workspace:
             assessments=deepcopy(source.assessments),
             shortlist=deepcopy(source.shortlist),
             custom_name=custom_name,
+            map_focus=deepcopy(source.map_focus),
             what_changed=what_changed,
             source_iteration_number=source.number,
             created_at=self._timestamp(),
@@ -276,6 +296,31 @@ class Workspace:
         current.custom_name = custom_name.strip() if custom_name else None
         return current
 
+    def update_current_map(
+        self,
+        *,
+        map_focus: str | None = None,
+        name: str | None = None,
+    ) -> Iteration:
+        """Update the current Opportunity Map's team-authored metadata.
+
+        ``None`` means the caller did not change that field.  Empty strings are
+        rejected so the Map always remains understandable when a team does add
+        a value.
+        """
+        current = self.current_iteration
+        if not current.is_editable:
+            raise ValueError("A set Iteration cannot be changed.")
+        if map_focus is not None:
+            if not map_focus.strip():
+                raise ValueError("Map focus cannot be empty.")
+            current.map_focus = map_focus.strip()
+        if name is not None:
+            if not name.strip():
+                raise ValueError("Map name cannot be empty.")
+            current.custom_name = name.strip()
+        return current
+
     def add_opportunity(self, opportunity: dict) -> dict:
         current = self.current_iteration
         if not current.is_editable:
@@ -292,7 +337,17 @@ class Workspace:
 
     @classmethod
     def from_dict(cls, payload: dict) -> "Workspace":
-        iterations = [Iteration(**deepcopy(item)) for item in payload["iterations"]]
+        iterations = []
+        for item in payload["iterations"]:
+            serialized = deepcopy(item)
+            # Old persisted Workspaces stored focus only in the Decision Frame.
+            serialized.setdefault("map_focus", serialized.get("decision_frame", {}).get("goal"))
+            # A short-lived prototype stored North Star on the Iteration. Keep
+            # its value as generic strategy context while migrating old data.
+            legacy_north_star = serialized.pop("north_star", None)
+            if legacy_north_star and not serialized.get("decision_frame", {}).get("strategy"):
+                serialized.setdefault("decision_frame", {})["strategy"] = legacy_north_star
+            iterations.append(Iteration(**serialized))
         if not iterations:
             raise ValueError("A Workspace requires an Iteration.")
         return cls(iterations=iterations)

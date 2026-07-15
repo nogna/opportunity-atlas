@@ -48,36 +48,23 @@ DEFAULT_PORTFOLIO = {
     "decision": {"selected_id": "ticket-triage", "rationale": "Prioritize support ticket signal triage: it combines a high-volume pain with available data and a clear human review point."},
 }
 
-DEFAULT_WORKSPACE = Workspace.start(
-    decision_frame={
-        "goal": "Improve customer response quality while protecting specialist time.",
-        "decision": "Choose the next AI workflow to pursue.",
-    },
-    opportunities=[
-        {"id": "ticket-triage", "title": "Support ticket signal triage"},
-        {"id": "renewal-brief", "title": "Renewal preparation brief"},
-    ],
-    dimensions=default_rubric(),
-    assessments={
-        "ticket-triage": {
-            "expected-value": {"score": 5, "rationale": "High support volume creates a clear opportunity."},
-            "strategic-alignment": {"score": 5, "rationale": "Directly supports response quality."},
-            "data-readiness": {"score": 4, "rationale": "Ticket data and metadata are available."},
-            "delivery-ease": {"score": 3, "rationale": "Requires a help-desk integration."},
-            "risk-manageability": {"score": 4, "rationale": "A lead reviews every escalation."},
-            "evidence-confidence": {"score": 4, "rationale": "Volume and workflow are known."},
+def _seeded_workspace() -> Workspace:
+    """Build the open first Opportunity Map shown on a fresh Workspace."""
+    return Workspace.start(
+        decision_frame={
+            "strategy": "Helpful AI that strengthens customer trust and keeps human decisions accountable.",
         },
-        "renewal-brief": {
-            "expected-value": {"score": 4, "rationale": "Saves meaningful senior time."},
-            "strategic-alignment": {"score": 4, "rationale": "Supports retention work."},
-            "data-readiness": {"score": 3, "rationale": "Data is spread across systems."},
-            "delivery-ease": {"score": 2, "rationale": "Several integrations are required."},
-            "risk-manageability": {"score": 3, "rationale": "A manager verifies briefs."},
-            "evidence-confidence": {"score": 3, "rationale": "Time estimate is self-reported."},
-        },
-    },
-    shortlist=["ticket-triage", "renewal-brief"],
-)
+        map_focus="Find AI-assisted ways to improve customer response quality while protecting specialist time.",
+        opportunities=[
+            {"id": "ticket-triage", "title": "Support ticket signal triage", "summary": "A rough team note about repeated customer issues."},
+            {"id": "renewal-brief", "title": "Renewal preparation brief", "summary": "A rough team note about better account preparation."},
+        ],
+        dimensions=[],
+        assessments={},
+    )
+
+
+DEFAULT_WORKSPACE = _seeded_workspace()
 
 COLLABORATION = Collaboration()
 
@@ -106,9 +93,16 @@ def save_workspace(workspace):
 
 
 def workspace_payload(workspace: Workspace) -> dict:
-    """Expose the editable Workspace and its derived, explainable ranking."""
+    """Expose the editable Workspace and its Map metadata."""
     payload = workspace.to_dict()
-    payload["ranking"] = workspace.current_ranking()
+    current = workspace.current_iteration
+    payload["ranking"] = workspace.current_ranking() if current.dimensions else []
+    payload["map"] = {
+        "name": current.name,
+        "focus": current.map_focus,
+        "north_star": current.north_star,
+        "is_editable": current.is_editable,
+    }
     return payload
 
 
@@ -120,7 +114,7 @@ def apply_auto_save(workspace: Workspace, field_id: str, value: object) -> None:
     if field_id == "decision-frame.goal":
         if not isinstance(value, str) or not value.strip():
             raise ValueError("The Decision Frame goal cannot be empty.")
-        current.decision_frame["goal"] = value.strip()
+        current.map_focus = value.strip()
         return
     raise ValueError(f"Unknown editable field '{field_id}'.")
 
@@ -225,6 +219,14 @@ class AppHandler(SimpleHTTPRequestHandler):
                 dimensions = payload["dimensions"]
                 validate_rubric(dimensions)
                 workspace.current_iteration.dimensions = dimensions
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/map":
+                workspace = load_workspace()
+                workspace.update_current_map(
+                    map_focus=payload.get("focus"),
+                    name=payload.get("name"),
+                )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
             if self.path == "/api/ai/suggestions":

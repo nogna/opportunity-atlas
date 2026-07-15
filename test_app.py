@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 
 import app
 from collaboration import Collaboration
-from ranking import DEFAULT_DIMENSION_IDS, validate_rubric
 
 
 def rank(portfolio):
@@ -42,17 +41,33 @@ class PortfolioTests(unittest.TestCase):
         portfolio["dimensions"][0]["weight"] = 999
         self.assertEqual(100, app.clean_portfolio(portfolio)["dimensions"][0]["weight"])
 
-    def test_workspace_seed_uses_complete_default_rubric_and_returns_ranking(self):
+    def test_workspace_seed_shows_one_editable_first_opportunity_map(self):
         payload = app.workspace_payload(app.DEFAULT_WORKSPACE)
+        (current,) = payload["iterations"]
 
+        self.assertEqual([], current["dimensions"])
+        self.assertEqual({}, current["assessments"])
+        self.assertEqual([], current["shortlist"])
+        self.assertEqual([], payload["ranking"])
+        self.assertIsNone(current["source_iteration_number"])
+        self.assertIsNone(current["next_opportunity_decision"])
+        self.assertTrue(current["map_focus"])
+        self.assertNotIn("north_star", current)
+        self.assertEqual("The Amber Current", payload["map"]["name"])
+        self.assertEqual(current["map_focus"], payload["map"]["focus"])
+        self.assertEqual(current["decision_frame"]["strategy"], payload["map"]["north_star"])
+        self.assertTrue(payload["map"]["is_editable"])
         self.assertEqual(
-            set(DEFAULT_DIMENSION_IDS),
-            {item["id"] for item in payload["iterations"][-1]["dimensions"]},
+            2,
+            len(current["opportunities"]),
         )
-        self.assertEqual(
-            ["ticket-triage", "renewal-brief"],
-            [item["opportunity_id"] for item in payload["ranking"]],
-        )
+
+    def test_workspace_seed_has_only_lightweight_rough_islands(self):
+        current = app.DEFAULT_WORKSPACE.current_iteration
+
+        self.assertEqual(2, len(current.opportunities))
+        for opportunity in current.opportunities:
+            self.assertTrue(opportunity["summary"])
 
     def test_auto_save_changes_the_editable_decision_frame_after_the_pause(self):
         workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
@@ -66,16 +81,7 @@ class PortfolioTests(unittest.TestCase):
         for save in collaboration.due_auto_saves(at=at + timedelta(milliseconds=750)):
             app.apply_auto_save(workspace, save.field_id, save.value)
 
-        self.assertEqual(
-            "Choose a grounded next workflow.",
-            workspace.current_iteration.decision_frame["goal"],
-        )
-
-    def test_default_rubric_cannot_drop_a_default_dimension(self):
-        dimensions = app.DEFAULT_WORKSPACE.current_iteration.dimensions[:-1]
-
-        with self.assertRaisesRegex(ValueError, "must remain present"):
-            validate_rubric(dimensions)
+        self.assertEqual("Choose a grounded next workflow.", workspace.current_iteration.map_focus)
 
 
 if __name__ == "__main__":

@@ -8,10 +8,13 @@ import re
 import urllib.error
 import urllib.request
 from copy import deepcopy
+from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from collaboration import Collaboration, FieldLockedError
+from ranking import default_rubric, validate_rubric
 from workspace import Workspace
 
 ROOT = Path(__file__).parent
@@ -53,16 +56,29 @@ DEFAULT_WORKSPACE = Workspace.start(
         {"id": "ticket-triage", "title": "Support ticket signal triage"},
         {"id": "renewal-brief", "title": "Renewal preparation brief"},
     ],
-    dimensions=[
-        {"id": "value", "name": "Expected value", "weight": 50},
-        {"id": "readiness", "name": "Data readiness", "weight": 50},
-    ],
+    dimensions=default_rubric(),
     assessments={
-        "ticket-triage": {"value": 5, "readiness": 4},
-        "renewal-brief": {"value": 4, "readiness": 3},
+        "ticket-triage": {
+            "expected-value": {"score": 5, "rationale": "High support volume creates a clear opportunity."},
+            "strategic-alignment": {"score": 5, "rationale": "Directly supports response quality."},
+            "data-readiness": {"score": 4, "rationale": "Ticket data and metadata are available."},
+            "delivery-ease": {"score": 3, "rationale": "Requires a help-desk integration."},
+            "risk-manageability": {"score": 4, "rationale": "A lead reviews every escalation."},
+            "evidence-confidence": {"score": 4, "rationale": "Volume and workflow are known."},
+        },
+        "renewal-brief": {
+            "expected-value": {"score": 4, "rationale": "Saves meaningful senior time."},
+            "strategic-alignment": {"score": 4, "rationale": "Supports retention work."},
+            "data-readiness": {"score": 3, "rationale": "Data is spread across systems."},
+            "delivery-ease": {"score": 2, "rationale": "Several integrations are required."},
+            "risk-manageability": {"score": 3, "rationale": "A manager verifies briefs."},
+            "evidence-confidence": {"score": 3, "rationale": "Time estimate is self-reported."},
+        },
     },
     shortlist=["ticket-triage", "renewal-brief"],
 )
+
+COLLABORATION = Collaboration()
 
 
 def load_portfolio():
@@ -86,6 +102,30 @@ def load_workspace():
 def save_workspace(workspace):
     WORKSPACE_DATA.parent.mkdir(parents=True, exist_ok=True)
     WORKSPACE_DATA.write_text(json.dumps(workspace.to_dict(), indent=2), encoding="utf-8")
+
+
+def workspace_payload(workspace: Workspace) -> dict:
+    """Expose the editable Workspace and its derived, explainable ranking."""
+    payload = workspace.to_dict()
+    payload["ranking"] = workspace.current_ranking()
+    return payload
+
+
+def apply_auto_save(workspace: Workspace, field_id: str, value: object) -> None:
+    """Persist a supported draft field after Collaboration's debounce elapses."""
+    current = workspace.current_iteration
+    if not current.is_editable:
+        raise ValueError("A set Iteration cannot be changed.")
+    if field_id == "decision-frame.goal":
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("The Decision Frame goal cannot be empty.")
+        current.decision_frame["goal"] = value.strip()
+        return
+    raise ValueError(f"Unknown editable field '{field_id}'.")
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def clean_portfolio(payload):
@@ -144,10 +184,12 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def do_GET(self):
+        if self.path in {"/", "/index.html"}:
+            self.path = "/iteration.html"
         if self.path == "/api/portfolio":
             return self.send_json(HTTPStatus.OK, load_portfolio())
         if self.path == "/api/workspace":
-            return self.send_json(HTTPStatus.OK, load_workspace().to_dict())
+            return self.send_json(HTTPStatus.OK, workspace_payload(load_workspace()))
         return super().do_GET()
 
     def do_POST(self):
@@ -163,9 +205,58 @@ class AppHandler(SimpleHTTPRequestHandler):
                     next_opportunity_id=payload["next_opportunity_id"],
                     rationale=payload["rationale"],
                     recorded_by=payload["recorded_by"],
+                    unranked_override_rationale=payload.get("unranked_override_rationale"),
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, {"iteration": iteration.__dict__})
+            if self.path == "/api/workspace/next-iteration":
+                workspace = load_workspace()
+                workspace.start_next_iteration(
+                    what_changed=payload["what_changed"],
+                    custom_name=payload.get("custom_name"),
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.CREATED, workspace_payload(workspace))
+            if self.path == "/api/workspace/rubric":
+                workspace = load_workspace()
+                if not workspace.current_iteration.is_editable:
+                    raise ValueError("A set Iteration cannot be changed.")
+                dimensions = payload["dimensions"]
+                validate_rubric(dimensions)
+                workspace.current_iteration.dimensions = dimensions
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/archive":
+                workspace = load_workspace()
+                archive = workspace.archive_inherited_opportunity(
+                    opportunity_id=payload["opportunity_id"],
+                    reason=payload["reason"],
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, {"archive": archive, **workspace_payload(workspace)})
+            if self.path == "/api/workspace/restore":
+                workspace = load_workspace()
+                opportunity = workspace.restore_inherited_opportunity(payload["opportunity_id"])
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, {"opportunity": opportunity, **workspace_payload(workspace)})
+            if self.path == "/api/collaboration/start-editing":
+                lock = COLLABORATION.start_editing(
+                    payload["field_id"], payload["display_name"], at=_now()
+                )
+                return self.send_json(HTTPStatus.OK, {"field_id": lock.field_id, "holder": lock.holder})
+            if self.path == "/api/collaboration/input":
+                lock = COLLABORATION.record_input(
+                    payload["field_id"], payload["display_name"], payload.get("value"), at=_now()
+                )
+                return self.send_json(HTTPStatus.ACCEPTED, {"field_id": lock.field_id, "holder": lock.holder})
+            if self.path == "/api/collaboration/autosave":
+                workspace = load_workspace()
+                saves = COLLABORATION.due_auto_saves(at=_now())
+                for save in saves:
+                    apply_auto_save(workspace, save.field_id, save.value)
+                if saves:
+                    save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, {"saved_fields": [save.field_id for save in saves]})
             if self.path == "/api/assist":
                 portfolio = load_portfolio()
                 use_case = next((item for item in portfolio["use_cases"] if item["id"] == payload.get("id")), None)

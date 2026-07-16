@@ -104,6 +104,11 @@ def workspace_payload(workspace: Workspace) -> dict:
         "north_star": current.north_star,
         "is_editable": current.is_editable,
     }
+    payload["expedition"] = {
+        "evaluations": deepcopy(current.expedition_evaluations),
+        "suggested_order": workspace.suggested_expedition_order(),
+        "confirmed": deepcopy(current.expeditions),
+    }
     return payload
 
 
@@ -230,6 +235,21 @@ class AppHandler(SimpleHTTPRequestHandler):
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/expedition/evaluations":
+                workspace = load_workspace()
+                workspace.update_expedition_evaluations(payload["evaluations"])
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/expeditions":
+                workspace = load_workspace()
+                expedition = workspace.confirm_expedition(
+                    ordered_island_ids=payload["ordered_island_ids"]
+                )
+                save_workspace(workspace)
+                return self.send_json(
+                    HTTPStatus.CREATED,
+                    {"expedition": expedition, "workspace": workspace_payload(workspace)},
+                )
             if self.path == "/api/ai/suggestions":
                 return self.send_json(HTTPStatus.OK, suggest_for_iteration(load_workspace().current_iteration))
             if self.path == "/api/workspace/opportunities":

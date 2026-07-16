@@ -69,6 +69,27 @@ class PortfolioTests(unittest.TestCase):
         for opportunity in current.opportunities:
             self.assertTrue(opportunity["summary"])
 
+    def test_workspace_payload_exposes_the_visible_expedition_preparation_state(self):
+        workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
+        workspace.update_expedition_evaluations(
+            {
+                "ticket-triage": {"impact": 5, "readiness": 3},
+                "renewal-brief": {"impact": 3, "readiness": 4},
+            }
+        )
+
+        payload = app.workspace_payload(workspace)
+
+        self.assertEqual(
+            ["ticket-triage", "renewal-brief"],
+            [item["island_id"] for item in payload["expedition"]["suggested_order"]],
+        )
+        self.assertEqual(
+            {"impact": 5, "readiness": 3},
+            payload["expedition"]["evaluations"]["ticket-triage"],
+        )
+        self.assertEqual([], payload["expedition"]["confirmed"])
+
     def test_auto_save_changes_the_editable_decision_frame_after_the_pause(self):
         workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
         collaboration = Collaboration()

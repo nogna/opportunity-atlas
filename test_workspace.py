@@ -4,6 +4,42 @@ from workspace import Workspace
 
 
 class WorkspaceOpportunityMapTests(unittest.TestCase):
+    def test_team_can_confirm_an_adjusted_expedition_without_freezing_the_map(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant", "summary": "A rough team note."}
+        )
+        workspace.add_opportunity(
+            {"id": "reply-coach", "title": "Reply coach", "summary": "A rough team note."}
+        )
+
+        workspace.update_expedition_evaluations(
+            {
+                "case-summary": {"impact": 5, "readiness": 2},
+                "reply-coach": {"impact": 3, "readiness": 5},
+            }
+        )
+        expedition = workspace.confirm_expedition(
+            ordered_island_ids=["case-summary", "reply-coach"]
+        )
+
+        self.assertEqual(["reply-coach", "case-summary"], expedition["suggested_order"])
+        self.assertEqual(["case-summary", "reply-coach"], expedition["ordered_island_ids"])
+        self.assertEqual(
+            {"case-summary": {"impact": 5, "readiness": 2}, "reply-coach": {"impact": 3, "readiness": 5}},
+            expedition["evaluations"],
+        )
+        self.assertTrue(workspace.current_iteration.is_editable)
+
+        workspace.update_opportunity("case-summary", detail="The Map keeps evolving.")
+        self.assertNotEqual(
+            "The Map keeps evolving.",
+            expedition["islands"][0].get("detail"),
+        )
+
+        restored = Workspace.from_dict(workspace.to_dict())
+        self.assertEqual(expedition, restored.current_iteration.expeditions[0])
+
     def test_first_map_exposes_its_focus_strategy_context_and_generated_atlas_name(self):
         workspace = Workspace.start(
             map_focus="Improve the support experience.",

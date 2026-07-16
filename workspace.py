@@ -24,6 +24,8 @@ class Iteration:
     opportunities: list[dict]
     dimensions: list[dict]
     assessments: dict
+    expedition_evaluations: dict[str, dict] = field(default_factory=dict)
+    expeditions: list[dict] = field(default_factory=list)
     shortlist: list[str] = field(default_factory=list)
     custom_name: str | None = None
     what_changed: str | None = None
@@ -285,6 +287,69 @@ class Workspace:
             assessments=current.assessments,
         )
 
+    def update_expedition_evaluations(self, evaluations: dict[str, dict]) -> dict[str, dict]:
+        """Record the small, visible evaluation lens used to prepare an Expedition."""
+        current = self.current_iteration
+        if not current.is_editable:
+            raise ValueError("A set Iteration cannot be changed.")
+        island_ids = {island["id"] for island in current.opportunities}
+        if set(evaluations) != island_ids:
+            raise ValueError("Evaluate every Island on this Map before preparing an Expedition.")
+        cleaned = {}
+        for island_id, values in evaluations.items():
+            if not isinstance(values, dict):
+                raise ValueError("Each Island needs an Impact and readiness score.")
+            scores = {}
+            for criterion in ("impact", "readiness"):
+                score = values.get(criterion)
+                if isinstance(score, bool) or not isinstance(score, int) or not 1 <= score <= 5:
+                    raise ValueError("Impact and readiness scores must be whole numbers from 1 to 5.")
+                scores[criterion] = score
+            cleaned[island_id] = scores
+        current.expedition_evaluations = cleaned
+        return deepcopy(cleaned)
+
+    def suggested_expedition_order(self) -> list[dict]:
+        """Derive an explainable order from the Map's two visible input scores."""
+        current = self.current_iteration
+        entries = []
+        for island in current.opportunities:
+            values = current.expedition_evaluations.get(island["id"])
+            if values is None:
+                continue
+            entries.append(
+                {
+                    "island_id": island["id"],
+                    "title": island.get("title", island["id"]),
+                    "impact": values["impact"],
+                    "readiness": values["readiness"],
+                    "score": (values["impact"] + values["readiness"]) / 2,
+                }
+            )
+        return sorted(entries, key=lambda entry: (-entry["score"], entry["title"].casefold(), entry["island_id"]))
+
+    def confirm_expedition(self, *, ordered_island_ids: list[str]) -> dict:
+        """Preserve a team-confirmed ordering while keeping the Map editable."""
+        current = self.current_iteration
+        if not current.is_editable:
+            raise ValueError("A set Iteration cannot be changed.")
+        current_ids = [island["id"] for island in current.opportunities]
+        if set(ordered_island_ids) != set(current_ids) or len(ordered_island_ids) != len(current_ids):
+            raise ValueError("An Expedition must order every current Island exactly once.")
+        suggested = self.suggested_expedition_order()
+        if len(suggested) != len(current_ids):
+            raise ValueError("Evaluate every Island on this Map before confirming an Expedition.")
+        expedition = {
+            "id": f"expedition-{len(current.expeditions) + 1}",
+            "confirmed_at": self._timestamp(),
+            "suggested_order": [entry["island_id"] for entry in suggested],
+            "ordered_island_ids": list(ordered_island_ids),
+            "islands": deepcopy(current.opportunities),
+            "evaluations": deepcopy(current.expedition_evaluations),
+        }
+        current.expeditions.append(expedition)
+        return deepcopy(expedition)
+
     @staticmethod
     def _timestamp() -> str:
         return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -370,6 +435,8 @@ class Workspace:
         iterations = []
         for item in payload["iterations"]:
             serialized = deepcopy(item)
+            serialized.setdefault("expedition_evaluations", {})
+            serialized.setdefault("expeditions", [])
             # Old persisted Workspaces stored focus only in the Decision Frame.
             serialized.setdefault("map_focus", serialized.get("decision_frame", {}).get("goal"))
             # A short-lived prototype stored North Star on the Iteration. Keep

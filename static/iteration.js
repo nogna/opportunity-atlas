@@ -19,6 +19,7 @@ function currentMap(payload) {
     mapFocus: map.focus,
     northStar: map.north_star,
     opportunities: iteration.opportunities,
+    expedition: payload.expedition,
   };
 }
 
@@ -40,6 +41,10 @@ function render(payload) {
       <div class="compass" aria-hidden="true"><span>N</span><i></i></div>
       <div><p class="eyebrow">NORTH STAR · STRATEGIC CONTEXT</p><p class="north-star-copy">${escapeHtml(map.northStar || 'North Star context has not been set yet.')}</p></div>
     </section>
+    <section class="expedition-launch" aria-label="Expedition preparation">
+      <div><p class="eyebrow">TEAM PRIORITIES</p><h2>Prepare an Expedition</h2><p>Compare every Island using the team’s visible inputs, then choose the order together.</p></div>
+      <button class="primary" id="prepare-expedition" type="button">Prepare an Expedition</button>
+    </section>
     <section class="map-board" aria-label="Island map">
       <div class="board-label"><span>THE SEA OF POSSIBILITIES</span><span>${map.opportunities.length} island${map.opportunities.length === 1 ? '' : 's'} charted</span></div>
       <div class="waves waves--one"></div><div class="waves waves--two"></div>
@@ -57,9 +62,96 @@ function bindMapInteractions() {
     $(`#${id}`).addEventListener('blur', saveMap);
   });
   $('#add-island').addEventListener('click', openAddIsland);
+  $('#prepare-expedition').addEventListener('click', openExpeditionPreparation);
   document.querySelectorAll('[data-island-id]').forEach(island => {
     island.addEventListener('click', () => openIsland(island.dataset.islandId));
   });
+}
+
+function scoreOptions(selected) {
+  return [1, 2, 3, 4, 5].map(score => `<option value="${score}"${score === selected ? ' selected' : ''}>${score}</option>`).join('');
+}
+
+function expeditionValues(form) {
+  return Object.fromEntries(currentMap(workspace).opportunities.map(island => [island.id, {
+    impact: Number(form.elements[`impact-${island.id}`].value),
+    readiness: Number(form.elements[`readiness-${island.id}`].value),
+  }]));
+}
+
+function openExpeditionPreparation() {
+  const map = currentMap(workspace);
+  const evaluations = map.expedition.evaluations;
+  const rows = map.opportunities.map(island => {
+    const values = evaluations[island.id] || {impact: 3, readiness: 3};
+    return `<tr><th scope="row">${escapeHtml(island.title)}</th><td><label class="sr-only" for="impact-${escapeHtml(island.id)}">Impact for ${escapeHtml(island.title)}</label><select id="impact-${escapeHtml(island.id)}" name="impact-${escapeHtml(island.id)}">${scoreOptions(values.impact)}</select></td><td><label class="sr-only" for="readiness-${escapeHtml(island.id)}">Readiness for ${escapeHtml(island.title)}</label><select id="readiness-${escapeHtml(island.id)}" name="readiness-${escapeHtml(island.id)}">${scoreOptions(values.readiness)}</select></td></tr>`;
+  }).join('');
+  const dialog = $('#island-dialog');
+  dialog.innerHTML = `<form id="expedition-evaluations"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">PREPARE AN EXPEDITION</p><h2>What is worth exploring now?</h2><p class="dialog-intro">Add the Map evaluation inputs together. The suggested order is the equal average of Impact and readiness—nothing is hidden.</p><table class="evaluation-table"><thead><tr><th>Island</th><th>Impact <small>1–5</small></th><th>Readiness <small>1–5</small></th></tr></thead><tbody>${rows}</tbody></table><p class="form-error" id="form-error" role="alert"></p><button class="primary" type="submit">Review suggested order</button></form>`;
+  dialog.showModal();
+  $('#close-dialog').addEventListener('click', () => dialog.close());
+  $('#expedition-evaluations').addEventListener('submit', saveExpeditionEvaluations);
+}
+
+async function saveExpeditionEvaluations(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    form.querySelector('button[type="submit"]').disabled = true;
+    const payload = await post('/api/workspace/expedition/evaluations', {evaluations: expeditionValues(form)});
+    workspace = payload;
+    openExpeditionConfirmation(payload.expedition.suggested_order.map(entry => entry.island_id));
+  } catch (error) {
+    $('#form-error').textContent = error.message;
+    form.querySelector('button[type="submit"]').disabled = false;
+  }
+}
+
+function openExpeditionConfirmation(order) {
+  const map = currentMap(workspace);
+  const suggested = map.expedition.suggested_order.map(entry => entry.island_id);
+  const cards = order.map((id, index) => {
+    const island = map.opportunities.find(item => item.id === id);
+    const values = map.expedition.evaluations[id];
+    const suggestedPosition = suggested.indexOf(id) + 1;
+    const adjustment = suggestedPosition === index + 1 ? 'Suggested position' : `Team-adjusted from suggested #${suggestedPosition}`;
+    return `<li class="expedition-island"><span class="expedition-position">${index + 1}</span><div><strong>${escapeHtml(island.title)}</strong><small>Impact ${values.impact} · readiness ${values.readiness} · ${adjustment}</small></div><span class="order-controls"><button type="button" data-move="up" data-island-id="${escapeHtml(id)}" ${index === 0 ? 'disabled' : ''} aria-label="Move ${escapeHtml(island.title)} up">↑</button><button type="button" data-move="down" data-island-id="${escapeHtml(id)}" ${index === order.length - 1 ? 'disabled' : ''} aria-label="Move ${escapeHtml(island.title)} down">↓</button></span></li>`;
+  }).join('');
+  const dialog = $('#island-dialog');
+  dialog.innerHTML = `<section class="expedition-confirmation"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">TEAM CONFIRMATION</p><h2>Set the Expedition order</h2><p class="dialog-intro">Adjust the suggested order if needed. Confirming preserves this Island and evaluation snapshot; your Map remains editable.</p><ol class="expedition-order">${cards}</ol><p class="form-error" id="form-error" role="alert"></p><button class="primary" id="confirm-expedition" type="button">Confirm this Expedition</button></section>`;
+  dialog.showModal();
+  $('#close-dialog').addEventListener('click', () => dialog.close());
+  document.querySelectorAll('[data-move]').forEach(button => button.addEventListener('click', () => {
+    const index = order.indexOf(button.dataset.islandId);
+    const swapWith = button.dataset.move === 'up' ? index - 1 : index + 1;
+    [order[index], order[swapWith]] = [order[swapWith], order[index]];
+    openExpeditionConfirmation(order);
+  }));
+  $('#confirm-expedition').addEventListener('click', () => confirmExpedition(order));
+}
+
+async function confirmExpedition(order) {
+  try {
+    $('#confirm-expedition').disabled = true;
+    const result = await post('/api/workspace/expeditions', {ordered_island_ids: order});
+    workspace = result.workspace;
+    $('#island-dialog').close();
+    render(workspace);
+    showConfirmedExpedition(result.expedition);
+  } catch (error) {
+    $('#form-error').textContent = error.message;
+    $('#confirm-expedition').disabled = false;
+  }
+}
+
+function showConfirmedExpedition(expedition) {
+  const islands = Object.fromEntries(expedition.islands.map(island => [island.id, island]));
+  const rows = expedition.ordered_island_ids.map((id, index) => `<li class="expedition-island"><span class="expedition-position">${index + 1}</span><div><strong>${escapeHtml(islands[id].title)}</strong><small>Impact ${expedition.evaluations[id].impact} · readiness ${expedition.evaluations[id].readiness}</small></div></li>`).join('');
+  const dialog = $('#island-dialog');
+  dialog.innerHTML = `<section class="expedition-confirmation"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">EXPEDITION CONFIRMED</p><h2>Your team’s snapshot is preserved</h2><p class="dialog-intro">This read-only Expedition records the Islands and Map evaluation inputs at this moment. Your Map remains open for further work.</p><ol class="expedition-order">${rows}</ol><button class="primary" id="return-to-map" type="button">Return to the Map</button></section>`;
+  dialog.showModal();
+  $('#close-dialog').addEventListener('click', () => dialog.close());
+  $('#return-to-map').addEventListener('click', () => dialog.close());
 }
 
 function scheduleMapSave() {

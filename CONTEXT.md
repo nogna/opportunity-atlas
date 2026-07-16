@@ -2,64 +2,56 @@
 
 ## Workspace
 
-The single shared, persisted portfolio used by a team to compare AI use cases, adjust their evaluation rubric, and record its next bet through ordered Iterations. All team members who open the MVP can edit its current Iteration; prior Iterations are read-only history. The MVP has exactly one Workspace; workspace creation, selection, and tenant separation are out of scope.
+A separate shared home for one team or clearly distinct area. A Workspace provides that team's North Star and contains its living Opportunity Map. Different teams or substantially different areas use separate Workspaces.
 
-## Iteration
+## Opportunity Map
 
-One long-lived, editable draft of the decision artifact, containing the Decision frame, Opportunities, Evaluation dimensions, weights, Assessments, Shortlist, and Archive decisions for an exploratory or evaluation cycle. It has an automatic sequential name and may have a custom name, which is editable only while the Iteration is a draft. An Iteration becomes set and read-only only when the team records one Next Opportunity decision. If no candidate is suitable, it remains a draft while the team records not-pursuing decisions or continues exploration. A new Iteration begins with a carry-forward review that records which inherited Opportunities to keep or archive, then copies the kept content as its editable starting point and records what changed. Iterations form one linear sequence, and their lineage prominently identifies the source Iteration, creation time, and reassessment trigger.
+The living atlas for one team's or area's AI opportunities. It evolves as Islands are discovered, developed, or archived. A Map never becomes read-only. Its name describes the team or area it serves, rather than an iteration or generated milestone name.
 
-## Decision frame
+## Map snapshot
 
-The shared, evolving context for a Workspace: its strategic goal, target users, workflows, constraints, available data, and decision to make. It can begin broad or narrow; unknown fields do not block the team from adding Opportunities.
+An immutable record of how an Opportunity Map looked when an Expedition was confirmed. It lets people see that the current Map has since changed, without locking or replacing the Map.
+
+## North Star
+
+The Workspace's longer-lived AI vision or strategy. It gives the Map strategic context but is not an Island, a Map goal, or an AI-generated recommendation.
+
+## Island
+
+The user-facing, old-atlas representation of one possible AI opportunity on an Opportunity Map. An Island may begin as a short team note and become richer through team discussion and optional AI help. Its evaluation values belong to the Island itself.
+
+## Archived Island
+
+An Island the team has removed from the active Map because it no longer belongs. Archiving requires a short reason and is reversible. Archived Islands remain available through an optional archived-Islands view.
+
+## Expedition
+
+A first-class, team-confirmed focused commitment from an Opportunity Map. It selects the Islands the team intends to explore or develop further, has a required short goal, and may include an optional intended outcome. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+
+## Map changes
+
+A read-only comparison between an Expedition's Map snapshot and the current living Map. It makes added, changed, or archived Islands visible without requiring the team to write a change note or manage manual Map versions.
 
 ## AI suggestion
 
-Proposed Opportunity wording, missing-context prompts, candidate Opportunities, Evaluation-dimension weight changes, trade-off summaries, or carry-forward review flags generated from the Decision frame. An AI suggestion visibly identifies its assumptions and uncertainties, is distinct from team-authored content, and never becomes Workspace content until a Team member explicitly adds, accepts, or edits it; it does not recommend or select a Next Opportunity decision or archive an Opportunity.
+Proposed Island wording, missing-context prompts, trade-off explanations, or preparation actions. An AI suggestion visibly identifies assumptions and uncertainties, remains distinct from team-authored content, and never changes Island values, selects Islands, confirms an Expedition, or archives an Island without explicit team action.
 
 ## Evidence
 
-Team-authored notes and optional links that support or challenge an Opportunity or Assessment. AI may structure or question Evidence but does not claim external research or generate citations as Evidence in the MVP.
+Team-authored notes and optional links that support or challenge an Island or its evaluation values. AI may structure or question Evidence but does not present generated claims or citations as team Evidence.
 
-## Opportunity
+## Evaluation value
 
-One candidate AI use case within a Workspace. An Opportunity captures the affected user and workflow, the current pain, the proposed AI-enabled workflow, expected outcome, Evidence, and Assessments; its maturity is derived from this content rather than a lifecycle stage.
-
-## Not-pursuing decision
-
-A recorded decision to set an Opportunity aside, including its rationale, the Team member who recorded it, and its timestamp. It is reversible while its Iteration is a draft; once the Iteration is set, reconsideration belongs in a new Iteration.
-
-## Archive decision
-
-A record in a new Iteration that an inherited Opportunity is no longer relevant to that Iteration, including its reason and a compact read-only summary linking to the source Iteration. The Opportunity remains available in the source Iteration's history and may be restored while the new Iteration is a draft.
-
-## Shortlist
-
-A manually curated set of promising Opportunities selected for focused comparison. It is distinct from the one recorded next Opportunity to pursue.
-
-## Next Opportunity decision
-
-The recorded selection of one Opportunity from an Iteration's Shortlist as the next one to pursue, including its rationale, recording Team member, timestamp, and a snapshot of the Ranking and weights when it was made. Recording this decision sets the Iteration as read-only; later reassessment belongs in a new Iteration.
-
-## Evaluation dimension
-
-One configurable criterion used to compare Opportunities, such as expected value or delivery effort. It has a direction that determines whether a higher or lower Assessment score is favourable; every default Evaluation dimension includes a concise definition and 1, 3, and 5 scoring anchors.
-
-## Assessment
-
-An Opportunity's evidence-backed evaluation against one Evaluation dimension. An Assessment has a whole-number score from 1 to 5, an optional rationale, and an Assessment confidence indicator; the indicator reports the evaluator's certainty in that score and does not affect Ranking.
-
-## Evidence confidence
-
-An Evaluation dimension that measures the strength of an Opportunity's Evidence. Unlike Assessment confidence, its score is weighted into the Ranking.
-
-## Ranking
-
-The derived, explainable ordering of Opportunities from their weighted Assessments. An Opportunity is unranked when it lacks an Assessment for any Evaluation dimension with a non-zero weight; equal scores share a rank and are displayed alphabetically by title.
+A visible, adjustable input on an Island that helps the team compare opportunities. Evaluation values are authored on Islands in the Map; Expedition does not introduce a separate ranking model.
 
 ## Team member
 
-A person collaborating in the shared Workspace. A Team member chooses a display name when opening the Workspace; this name identifies their field-level edit locks.
+A person collaborating in a shared Workspace. A Team member chooses a display name when opening the Workspace; the name identifies temporary edit locks.
 
 ## Field-level edit lock
 
-A temporary claim on one editable Opportunity or Workspace field. While a team member edits a field, other team members cannot edit that same field, but can continue working on other fields and Opportunities.
+A temporary claim on one editable Map or Island field. While a Team member edits that field, others cannot edit the same field but can continue working elsewhere.
+
+## Legacy terms
+
+**Iteration**, **Decision frame**, **Map focus**, **Shortlist**, **Next Opportunity decision**, and **not-pursuing decision** are superseded product language. Do not introduce them in new user-facing work.

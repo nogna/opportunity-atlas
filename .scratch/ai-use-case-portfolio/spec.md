@@ -1,6 +1,6 @@
 # AI Use-Case Portfolio
 
-Status: ready-for-agent
+Status: superseded for product semantics — use `CONTEXT.md`, `docs/adr/0004-expedition-map-snapshots.md`, and `docs/planning/opportunity-map-prototype-brief.md` as the canonical model. This file remains historical supporting material until it is rewritten from the current model.
 
 ## Problem Statement
 
@@ -78,7 +78,7 @@ The workspace persists the portfolio, evaluations, configuration, and shortlist 
 
 - Model the product as one portfolio-workspace boundary. This boundary owns the Decision frame, Opportunities, Evaluation dimensions, weights, Assessments, Ranking, Shortlist, and Next Opportunity decision. Presentation views and AI assistance interact with this boundary instead of creating competing state models.
 - Model the Workspace as ordered Iterations. The current Iteration is a long-lived, editable draft that owns its Decision frame, Opportunities, Evaluation dimensions, weights, Assessments, Ranking, Shortlist, and Archive decisions. It may evolve throughout an exploratory or evaluation phase without creating versions.
-- Recording a Next Opportunity decision sets the current Iteration as read-only and preserves its decision, rationale, and Ranking snapshot. A new Iteration starts only from that set current Iteration with a carry-forward review: it records inherited Opportunities the team archives, with a reason, and copies the kept Decision frame, Opportunities, Evidence, rubric, weights, and Assessments as an editable starting point.
+- Recording a Next Opportunity decision sets the current Iteration as read-only and preserves its decision, rationale, and Ranking snapshot. A new Iteration starts only from that set current Iteration with a carry-forward review: it records inherited Opportunities the team explicitly archives with a required short reason, and copies the kept Decision frame, Opportunities, Evidence, rubric, weights, and Assessments as an editable starting point.
 - An archived inherited Opportunity may be restored while the new Iteration is a draft; record the restoration in that Iteration.
 - An Archive decision shows a compact read-only summary of the inherited Opportunity and links to its source Iteration.
 - During the carry-forward review, AI may flag inherited Opportunities that may no longer fit the reassessment trigger. It must label assumptions and uncertainties and cannot archive, restore, or otherwise change an Opportunity; the team explicitly keeps, archives, or restores each one.
@@ -86,8 +86,8 @@ The workspace persists the portfolio, evaluations, configuration, and shortlist 
 - An Iteration remains a draft until it records one Next Opportunity decision. If no candidate is suitable, continue the draft and record not-pursuing decisions rather than setting an empty Iteration.
 - Iterations form one linear history; branching from an older Iteration is out of scope for the MVP.
 - Make each Iteration's source Iteration and creation time prominent in the artifact history; do not emphasize who started it.
-- Require a short “what changed?” note when starting a new Iteration, and display it with the Iteration's source and creation time.
-- Give each Iteration an automatic sequential name and allow the team to add an optional custom name.
+- Do not require a “what changed?” note when starting a new Iteration. Provide Map changes as a read-only overview for comparing Map focus, Opportunities, and relevant content across Maps.
+- Give each user-facing Opportunity Map an automatically generated old-atlas-style name and allow the team to rename it while it is a draft.
 - Permit a custom Iteration name to change only while the Iteration is a draft; fix it when the Iteration is set.
 - Implement the application domain and server-side capabilities in Python. Select the specific web framework, persistence library, and frontend approach during implementation planning; those choices must preserve the single portfolio-workspace boundary and collaborative field-lock interaction model.
 - Persist one pre-created, demonstrable Workspace with a seeded current Iteration. Workspace creation, selection, and tenant separation are out of scope for the MVP.

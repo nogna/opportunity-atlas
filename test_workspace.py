@@ -91,6 +91,75 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
         restored = Workspace.from_dict(workspace.to_dict())
         self.assertEqual(island, restored.current_iteration.opportunities[0])
 
+    def test_island_core_and_evaluation_values_are_saved_on_the_island(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {
+                "id": "case-summary",
+                "title": "Case summary assistant",
+                "summary": "A direct team-created Island.",
+            }
+        )
+
+        island = workspace.update_opportunity(
+            "case-summary",
+            detail="Help escalation leads prepare accountable case summaries.",
+            evaluation={
+                "value": {"score": 4, "rationale": "Escalation leads lose time gathering context."},
+                "readiness": {"score": 3, "rationale": "Ticket data is available but fragmented."},
+                "effort": {"score": 2, "rationale": "Start with one support queue."},
+            },
+        )
+
+        self.assertEqual(
+            4, island["evaluation"]["value"]["score"]
+        )
+        self.assertEqual(
+            "Ticket data is available but fragmented.",
+            island["evaluation"]["readiness"]["rationale"],
+        )
+        restored = Workspace.from_dict(workspace.to_dict())
+        self.assertEqual(island["evaluation"], restored.current_iteration.opportunities[0]["evaluation"])
+
+    def test_island_evaluation_rejects_a_score_without_a_team_rationale(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant"}
+        )
+
+        with self.assertRaisesRegex(ValueError, "rationale"):
+            workspace.update_opportunity(
+                "case-summary",
+                evaluation={"value": {"score": 4, "rationale": " "}},
+            )
+
+    def test_island_evaluation_rejects_values_the_map_cannot_display(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant"}
+        )
+
+        with self.assertRaisesRegex(ValueError, "Unknown Island evaluation"):
+            workspace.update_opportunity(
+                "case-summary",
+                evaluation={"risk": {"score": 2, "rationale": "Needs review."}},
+            )
+
+    def test_living_map_still_allows_island_changes_after_legacy_decision_data(self):
+        workspace = self._workspace()
+        workspace.current_iteration.next_opportunity_decision = {"opportunity_id": "legacy"}
+
+        island = workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant"}
+        )
+        updated = workspace.update_opportunity(
+            island["id"], detail="The Map remains editable after an Expedition snapshot."
+        )
+
+        self.assertEqual(
+            "The Map remains editable after an Expedition snapshot.", updated["detail"]
+        )
+
     def test_legacy_north_star_is_migrated_to_read_only_strategy_context(self):
         workspace = Workspace.from_dict(
             {

@@ -26,6 +26,7 @@ class SeededDemoFlowTests(unittest.TestCase):
             {
                 "ticket-triage",
                 "renewal-brief",
+                "knowledge-gaps",
             },
             {item["id"] for item in current.opportunities},
         )

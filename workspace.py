@@ -16,6 +16,10 @@ _ATLAS_MAP_NAMES = (
     "The Starlit Sound",
 )
 
+# The first Map-core slice intentionally keeps a small, shared evaluation lens.
+# Chart Room may later add richer evidence and configurable lenses.
+ISLAND_EVALUATION_DIMENSION_IDS = ("value", "readiness", "effort")
+
 
 @dataclass
 class Iteration:
@@ -309,8 +313,6 @@ class Workspace:
         a value.
         """
         current = self.current_iteration
-        if not current.is_editable:
-            raise ValueError("A set Iteration cannot be changed.")
         if map_focus is not None:
             if not map_focus.strip():
                 raise ValueError("Map focus cannot be empty.")
@@ -323,8 +325,6 @@ class Workspace:
 
     def add_opportunity(self, opportunity: dict) -> dict:
         current = self.current_iteration
-        if not current.is_editable:
-            raise ValueError("A set Iteration cannot be changed.")
         if not opportunity.get("id") or not opportunity.get("title"):
             raise ValueError("An Opportunity needs an id and title.")
         if any(item["id"] == opportunity["id"] for item in current.opportunities):
@@ -336,9 +336,11 @@ class Workspace:
         self,
         opportunity_id: str,
         *,
+        title: str | None = None,
         detail: str | None = None,
         next_move: str | None = None,
         ai_formulation: str | None = None,
+        evaluation: dict | None = None,
     ) -> dict:
         """Develop an Island while preserving its original team note.
 
@@ -346,13 +348,15 @@ class Workspace:
         silently replace the team's original contribution.
         """
         current = self.current_iteration
-        if not current.is_editable:
-            raise ValueError("A set Iteration cannot be changed.")
         opportunity = next(
             (item for item in current.opportunities if item["id"] == opportunity_id), None
         )
         if opportunity is None:
             raise ValueError("The Island does not belong to this Map.")
+        if title is not None:
+            if not title.strip():
+                raise ValueError("An Island needs a name.")
+            opportunity["title"] = title.strip()
         for key, value in {
             "detail": detail,
             "next_move": next_move,
@@ -360,7 +364,29 @@ class Workspace:
         }.items():
             if value is not None:
                 opportunity[key] = value.strip()
+        if evaluation is not None:
+            opportunity["evaluation"] = self._validated_evaluation(evaluation)
         return opportunity
+
+    @staticmethod
+    def _validated_evaluation(evaluation: dict) -> dict:
+        """Keep a team's visible values and their reasons together on an Island."""
+        if not isinstance(evaluation, dict):
+            raise ValueError("Island evaluation values must be an object.")
+        validated = {}
+        for dimension, value in evaluation.items():
+            if dimension not in ISLAND_EVALUATION_DIMENSION_IDS:
+                raise ValueError(f"Unknown Island evaluation value '{dimension}'.")
+            if not isinstance(value, dict):
+                raise ValueError("Each Island evaluation value must include a score and rationale.")
+            score = value.get("score")
+            rationale = value.get("rationale")
+            if not isinstance(score, int) or not 1 <= score <= 5:
+                raise ValueError("Island evaluation scores must be whole numbers from 1 to 5.")
+            if not isinstance(rationale, str) or not rationale.strip():
+                raise ValueError("Each Island evaluation score needs a team rationale.")
+            validated[dimension] = {"score": score, "rationale": rationale.strip()}
+        return validated
 
     def to_dict(self) -> dict:
         return {"iterations": [asdict(iteration) for iteration in self.iterations]}

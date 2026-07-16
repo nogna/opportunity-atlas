@@ -58,16 +58,20 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(current["decision_frame"]["strategy"], payload["map"]["north_star"])
         self.assertTrue(payload["map"]["is_editable"])
         self.assertEqual(
-            2,
+            3,
             len(current["opportunities"]),
         )
 
-    def test_workspace_seed_has_only_lightweight_rough_islands(self):
+    def test_workspace_seed_has_several_islands_with_visible_team_values(self):
         current = app.DEFAULT_WORKSPACE.current_iteration
 
-        self.assertEqual(2, len(current.opportunities))
+        self.assertEqual(3, len(current.opportunities))
         for opportunity in current.opportunities:
             self.assertTrue(opportunity["summary"])
+            self.assertTrue(opportunity["evaluation"])
+            self.assertTrue(
+                all(value["rationale"] for value in opportunity["evaluation"].values())
+            )
 
     def test_auto_save_changes_the_editable_decision_frame_after_the_pause(self):
         workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())

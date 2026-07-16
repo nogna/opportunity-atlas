@@ -7,6 +7,7 @@ import os
 import re
 import urllib.error
 import urllib.request
+from urllib.parse import unquote
 from copy import deepcopy
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -236,6 +237,17 @@ class AppHandler(SimpleHTTPRequestHandler):
                 opportunity = workspace.add_opportunity(payload["opportunity"])
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.CREATED, {"opportunity": opportunity})
+            if self.path.startswith("/api/workspace/opportunities/"):
+                opportunity_id = unquote(self.path.rsplit("/", 1)[-1])
+                workspace = load_workspace()
+                opportunity = workspace.update_opportunity(
+                    opportunity_id,
+                    detail=payload.get("detail"),
+                    next_move=payload.get("next_move"),
+                    ai_formulation=payload.get("ai_formulation"),
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, {"opportunity": opportunity})
             if self.path == "/api/workspace/apply-suggested-weights":
                 workspace = load_workspace()
                 apply_suggested_weights(workspace.current_iteration, payload["weights"])

@@ -24,8 +24,8 @@ function currentMap(payload) {
 
 function islandMarkup(opportunity, index) {
   const positions = ['island--northwest', 'island--northeast', 'island--southwest', 'island--southeast', 'island--centre'];
-  const description = opportunity.description || opportunity.summary || 'A rough team note waiting to be shaped.';
-  return `<article class="island ${positions[index % positions.length]}" aria-label="Island: ${escapeHtml(opportunity.title)}"><span class="island-shore"><span class="island-land"><span class="island-title">${escapeHtml(opportunity.title)}</span><span class="island-note">${escapeHtml(description)}</span></span></span></article>`;
+  const description = opportunity.detail || opportunity.description || opportunity.summary || 'A rough team note waiting to be shaped.';
+  return `<button class="island ${positions[index % positions.length]}" data-island-id="${escapeHtml(opportunity.id)}" aria-label="Open Island: ${escapeHtml(opportunity.title)}"><span class="island-shore"><span class="island-land"><span class="island-title">${escapeHtml(opportunity.title)}</span><span class="island-note">${escapeHtml(description)}</span></span></span></button>`;
 }
 
 function render(payload) {
@@ -57,6 +57,9 @@ function bindMapInteractions() {
     $(`#${id}`).addEventListener('blur', saveMap);
   });
   $('#add-island').addEventListener('click', openAddIsland);
+  document.querySelectorAll('[data-island-id]').forEach(island => {
+    island.addEventListener('click', () => openIsland(island.dataset.islandId));
+  });
 }
 
 function scheduleMapSave() {
@@ -85,6 +88,21 @@ function openAddIsland() {
   $('#add-island-form').addEventListener('submit', addIsland);
 }
 
+function openIsland(islandId) {
+  const map = currentMap(workspace);
+  const island = map.opportunities.find(opportunity => opportunity.id === islandId);
+  if (!island) return;
+  const originalNote = island.description || island.summary || 'No original team note was recorded.';
+  const aiFormulation = island.ai_formulation
+    ? escapeHtml(island.ai_formulation)
+    : '<em>No AI formulation has been added.</em>';
+  const dialog = $('#island-dialog');
+  dialog.innerHTML = `<form id="develop-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">ISLAND CHART</p><h2>${escapeHtml(island.title)}</h2><section class="island-original-note"><span>ORIGINAL TEAM NOTE</span><p>${escapeHtml(originalNote)}</p></section><section class="island-ai-formulation"><span>AI FORMULATION</span><p>${aiFormulation}</p></section><section class="island-context"><span>MAP CONTEXT</span><strong>${escapeHtml(map.mapFocus)}</strong><small>North Star: ${escapeHtml(map.northStar || 'Not set')}</small></section><label>Develop this Island<textarea name="detail" maxlength="1000" placeholder="Add the problem, workflow, or opportunity as the team understands it.">${escapeHtml(island.detail || '')}</textarea></label><label>Next move<textarea name="next_move" maxlength="500" placeholder="What should the team do next?">${escapeHtml(island.next_move || '')}</textarea></label><p class="form-error" id="form-error" role="alert"></p><button class="primary" type="submit">Save Island detail</button></form>`;
+  dialog.showModal();
+  $('#close-dialog').addEventListener('click', () => dialog.close());
+  $('#develop-island-form').addEventListener('submit', saveIsland);
+}
+
 async function addIsland(event) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -93,6 +111,21 @@ async function addIsland(event) {
   try {
     form.querySelector('button[type="submit"]').disabled = true;
     await post('/api/workspace/opportunities', {opportunity});
+    $('#island-dialog').close();
+    await loadWorkspace();
+  } catch (error) {
+    $('#form-error').textContent = error.message;
+    form.querySelector('button[type="submit"]').disabled = false;
+  }
+}
+
+async function saveIsland(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  try {
+    form.querySelector('button[type="submit"]').disabled = true;
+    await post(`/api/workspace/opportunities/${encodeURIComponent(form.dataset.islandId)}`, values);
     $('#island-dialog').close();
     await loadWorkspace();
   } catch (error) {

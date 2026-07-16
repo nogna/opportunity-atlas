@@ -59,6 +59,38 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
         self.assertEqual("Improve the support experience.", restored.current_iteration.map_focus)
         self.assertEqual([island], restored.current_iteration.opportunities)
 
+    def test_team_can_develop_an_island_without_replacing_its_original_note(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {
+                "id": "case-summary",
+                "title": "Case summary assistant",
+                "summary": "A rough team note.",
+            }
+        )
+
+        island = workspace.update_opportunity(
+            "case-summary",
+            detail="Help support leads prepare a case summary before escalation.",
+            next_move="Ask two support leads to review a sample.",
+            ai_formulation="Potential AI formulation: draft a cited case summary for lead review.",
+        )
+
+        self.assertEqual("A rough team note.", island["summary"])
+        self.assertEqual(
+            "Help support leads prepare a case summary before escalation.", island["detail"]
+        )
+        self.assertEqual(
+            "Ask two support leads to review a sample.", island["next_move"]
+        )
+        self.assertEqual(
+            "Potential AI formulation: draft a cited case summary for lead review.",
+            island["ai_formulation"],
+        )
+
+        restored = Workspace.from_dict(workspace.to_dict())
+        self.assertEqual(island, restored.current_iteration.opportunities[0])
+
     def test_legacy_north_star_is_migrated_to_read_only_strategy_context(self):
         workspace = Workspace.from_dict(
             {

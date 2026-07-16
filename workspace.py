@@ -332,6 +332,36 @@ class Workspace:
         current.opportunities.append(deepcopy(opportunity))
         return current.opportunities[-1]
 
+    def update_opportunity(
+        self,
+        opportunity_id: str,
+        *,
+        detail: str | None = None,
+        next_move: str | None = None,
+        ai_formulation: str | None = None,
+    ) -> dict:
+        """Develop an Island while preserving its original team note.
+
+        AI wording is stored separately from team-authored detail so it cannot
+        silently replace the team's original contribution.
+        """
+        current = self.current_iteration
+        if not current.is_editable:
+            raise ValueError("A set Iteration cannot be changed.")
+        opportunity = next(
+            (item for item in current.opportunities if item["id"] == opportunity_id), None
+        )
+        if opportunity is None:
+            raise ValueError("The Island does not belong to this Map.")
+        for key, value in {
+            "detail": detail,
+            "next_move": next_move,
+            "ai_formulation": ai_formulation,
+        }.items():
+            if value is not None:
+                opportunity[key] = value.strip()
+        return opportunity
+
     def to_dict(self) -> dict:
         return {"iterations": [asdict(iteration) for iteration in self.iterations]}
 

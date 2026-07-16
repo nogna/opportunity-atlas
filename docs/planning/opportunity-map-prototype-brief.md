@@ -7,7 +7,7 @@ Status: current product model
 - A **Workspace** is for one team or distinct area and carries its North Star.
 - An **Opportunity Map** is that team's living atlas. It is named for the team or area, never becomes read-only, and evolves as Islands are discovered, changed, or archived.
 - A **Scouting note** is a lightweight, individually authored pre-meeting contribution for a possible Island. It is not yet an opportunity on the Map, but may later be transferred into one; the resulting Island preserves the note as visible provenance.
-- An **Island** is an AI opportunity. Teams can create an Island directly or transfer a Scouting note into it. The Island-development workspace is its deep-dive space: its opportunity hypothesis, supporting or challenging evidence, assumptions, unknowns, and visible evaluation values are developed there. The themed user-facing name is intentionally unresolved; “Evidence board” is superseded.
+- An **Island** is an AI opportunity. Teams can create an Island directly or transfer a Scouting note into it. The **Chart Room** is its deep-dive space: its opportunity hypothesis, supporting or challenging evidence, assumptions, unknowns, and visible evaluation values are developed there. “Evidence board” and “Island-development workspace” are superseded user-facing names.
 - An **Expedition** is a first-class destination beside the Map. It is the team's focused, evidence-seeking commitment: selected prepared Islands, a required short goal, and an optional intended outcome. It does not repeat Island discovery or evaluation. It is sprint-like in intent but has no fixed duration or size.
 - Confirming an Expedition saves an immutable **Map snapshot**. The Map remains editable. When the Map later differs, the Expedition shows a calm comparison with the current Map.
 - Only one Expedition is active per Map. Starting a new Expedition makes the prior one past.
@@ -15,7 +15,7 @@ Status: current product model
 ## Map and Expedition journeys
 
 1. Before Expedition planning, individual Team members may capture lightweight Scouting notes, or the team may create an Island directly. A note can later be transferred into an Island, where it remains visible as provenance rather than being discarded.
-2. The Island-development workspace explicitly separates team observations, AI lenses, assumptions, and missing evidence. Contextual guided help within it helps the team connect the workflow or problem, an AI-enabled change, and a possible outcome. It also holds the Island's adjustable evaluation values. AI does not transfer notes, author team content, or change values.
+2. The Chart Room explicitly separates team observations, AI lenses, assumptions, and missing evidence. Contextual guided help within it helps the team connect the workflow or problem, an AI-enabled change, and a possible outcome. It also holds the Island's adjustable evaluation values. AI does not transfer notes, author team content, or change values.
 3. The Map is where Island values are edited and Islands can be archived with a short, required reason. Archived Islands are restorable and available from an optional archive view.
 4. The team enters the Expedition destination, compares existing Island values, selects its focused Islands, states the required goal, optionally adds an intended outcome, and confirms. It may surface the selected Islands' prepared hypotheses and gaps, but does not ask the team to restate them.
 5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on.

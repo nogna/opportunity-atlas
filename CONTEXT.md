@@ -24,9 +24,9 @@ The user-facing, old-atlas representation of one AI opportunity on an Opportunit
 
 A lightweight, individually authored pre-meeting contribution for a possible Island. A Team member can add it before Expedition planning to surface an early observation, idea, or prompt to explore. It does not yet claim to be an opportunity on the Map. The team may later transfer it into an Island; the transferred Island preserves the note as visible provenance while its development happens in the Island-development workspace.
 
-## Island-development workspace
+## Chart Room
 
-The team-visible deep-dive workspace for an Island. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct while the team develops the Island's opportunity hypothesis and adjustable evaluation values. Contextual guided help is available within the workspace. AI may help organise or question this material but cannot transfer a Scouting note, author team content, or alter evaluation values. Its themed user-facing name is still to be chosen; do not use the superseded name “Evidence board” in new user-facing work.
+The team-visible, old-atlas deep-dive workspace for an Island. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct while the team develops the Island's opportunity hypothesis and adjustable evaluation values. Contextual guided help is available within the Chart Room. AI may help organise or question this material but cannot transfer a Scouting note, author team content, or alter evaluation values. “Evidence board” and “Island-development workspace” are superseded user-facing names.
 
 ## Archived Island
 

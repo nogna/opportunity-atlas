@@ -90,6 +90,7 @@ def _seeded_workspace() -> Workspace:
         ],
         dimensions=[],
         assessments={},
+        custom_name="Customer Support",
     )
 
 

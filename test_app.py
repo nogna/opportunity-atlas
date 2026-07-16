@@ -53,7 +53,7 @@ class PortfolioTests(unittest.TestCase):
         self.assertIsNone(current["next_opportunity_decision"])
         self.assertTrue(current["map_focus"])
         self.assertNotIn("north_star", current)
-        self.assertEqual("The Amber Current", payload["map"]["name"])
+        self.assertEqual("Customer Support", payload["map"]["name"])
         self.assertEqual(current["map_focus"], payload["map"]["focus"])
         self.assertEqual(current["decision_frame"]["strategy"], payload["map"]["north_star"])
         self.assertTrue(payload["map"]["is_editable"])

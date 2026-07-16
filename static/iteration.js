@@ -1,4 +1,5 @@
 let workspace;
+let mapNameSaveTimer;
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
@@ -38,7 +39,7 @@ function render(payload) {
   const map = currentMap(payload);
   $('#map-app').innerHTML = `
     <section class="map-intro">
-      <p class="eyebrow">YOUR OPPORTUNITY MAP</p><h1>${escapeHtml(map.name)}</h1>
+      <p class="eyebrow">YOUR OPPORTUNITY MAP</p><label class="map-name-label"><span class="sr-only">Map name</span><input id="map-name" value="${escapeHtml(map.name)}" aria-label="Map name"></label>
       <p class="map-intro-copy">Chart the AI opportunities your team may explore. Open an Island to record the team's current view of its value, readiness, and effort.</p>
     </section>
     <section class="north-star" aria-label="North Star context">
@@ -54,6 +55,26 @@ function render(payload) {
     </section>`;
   $('#add-island').addEventListener('click', openAddIsland);
   document.querySelectorAll('[data-island-id]').forEach(island => island.addEventListener('click', () => openIsland(island.dataset.islandId)));
+  $('#map-name').addEventListener('input', scheduleMapNameSave);
+  $('#map-name').addEventListener('blur', saveMapName);
+}
+
+function scheduleMapNameSave() {
+  clearTimeout(mapNameSaveTimer);
+  $('#save-status').textContent = 'Saving…';
+  mapNameSaveTimer = setTimeout(saveMapName, 700);
+}
+
+async function saveMapName() {
+  clearTimeout(mapNameSaveTimer);
+  const name = $('#map-name').value.trim();
+  if (!name) return;
+  try {
+    await post('/api/workspace/map', {name});
+    $('#save-status').textContent = 'Saved';
+  } catch (error) {
+    $('#save-status').textContent = `Not saved — ${error.message}`;
+  }
 }
 
 function openAddIsland() {

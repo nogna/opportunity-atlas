@@ -1,5 +1,7 @@
 # AI Use-Case Portfolio
 
+> **Status: historical discovery record.** This document records early interview conclusions and hackathon framing. Its product-model sections are superseded by [Opportunity Map product brief](opportunity-map-prototype-brief.md) and [`CONTEXT.md`](../../CONTEXT.md), which define the current Workspace, Opportunity Map, Island, Chart Room, Scouting note, and Expedition language. Do not use the retired shortlist, iteration, or decision-artifact language below for new product work.
+
 ## Purpose
 
 Create a living, shareable decision artifact that helps an AI team, its stakeholders, and cross-functional partners discover, evaluate, and prioritize AI use cases. It is the glue between people who can build AI systems and people who need to decide what outcomes to pursue.

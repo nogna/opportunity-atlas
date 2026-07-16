@@ -57,11 +57,40 @@ def _seeded_workspace() -> Workspace:
         },
         map_focus="Find AI-assisted ways to improve customer response quality while protecting specialist time.",
         opportunities=[
-            {"id": "ticket-triage", "title": "Support ticket signal triage", "summary": "A rough team note about repeated customer issues."},
-            {"id": "renewal-brief", "title": "Renewal preparation brief", "summary": "A rough team note about better account preparation."},
+            {
+                "id": "ticket-triage",
+                "title": "Support ticket signal triage",
+                "summary": "Spot repeated customer issues before they become incidents.",
+                "evaluation": {
+                    "value": {"score": 5, "rationale": "High ticket volume makes delayed patterns costly."},
+                    "readiness": {"score": 4, "rationale": "Ticket text and metadata are already available."},
+                    "effort": {"score": 3, "rationale": "A help-desk integration is needed."},
+                },
+            },
+            {
+                "id": "renewal-brief",
+                "title": "Renewal preparation brief",
+                "summary": "Help account teams prepare for strategic renewal conversations.",
+                "evaluation": {
+                    "value": {"score": 4, "rationale": "Preparation currently takes senior time."},
+                    "readiness": {"score": 3, "rationale": "Useful context is spread across systems."},
+                    "effort": {"score": 4, "rationale": "Several sources must be connected."},
+                },
+            },
+            {
+                "id": "knowledge-gaps",
+                "title": "Knowledge-base gap finder",
+                "summary": "Find unanswered customer questions worth turning into help content.",
+                "evaluation": {
+                    "value": {"score": 4, "rationale": "Better self-service could prevent repeat contacts."},
+                    "readiness": {"score": 3, "rationale": "Support tags exist, but intent data needs cleanup."},
+                    "effort": {"score": 2, "rationale": "The team can start with a small export."},
+                },
+            },
         ],
         dimensions=[],
         assessments={},
+        custom_name="Customer Support",
     )
 
 
@@ -242,9 +271,11 @@ class AppHandler(SimpleHTTPRequestHandler):
                 workspace = load_workspace()
                 opportunity = workspace.update_opportunity(
                     opportunity_id,
+                    title=payload.get("title"),
                     detail=payload.get("detail"),
                     next_move=payload.get("next_move"),
                     ai_formulation=payload.get("ai_formulation"),
+                    evaluation=payload.get("evaluation"),
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, {"opportunity": opportunity})

@@ -16,7 +16,7 @@ class SeededDemoFlowTests(unittest.TestCase):
         self.assertTrue(current.is_editable)
         self.assertIsNone(current.source_iteration_number)
         self.assertIsNone(current.next_opportunity_decision)
-        self.assertEqual("The Amber Current", current.name)
+        self.assertEqual("Customer Support", current.name)
         self.assertTrue(current.map_focus)
         self.assertTrue(current.north_star)
         self.assertEqual([], current.dimensions)
@@ -26,6 +26,7 @@ class SeededDemoFlowTests(unittest.TestCase):
             {
                 "ticket-triage",
                 "renewal-brief",
+                "knowledge-gaps",
             },
             {item["id"] for item in current.opportunities},
         )

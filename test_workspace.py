@@ -110,6 +110,61 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
         self.assertEqual("Legacy strategy", workspace.current_iteration.north_star)
         self.assertNotIn("north_star", workspace.to_dict()["iterations"][0])
 
+    def test_later_map_carries_the_prior_focus_and_islands_as_an_editable_draft(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant", "summary": "A rough team note."}
+        )
+
+        later_map = workspace.start_later_map(
+            map_focus="Improve the support experience without losing specialist judgement."
+        )
+
+        self.assertEqual(2, later_map.number)
+        self.assertEqual(1, later_map.source_iteration_number)
+        self.assertEqual(
+            "Improve the support experience without losing specialist judgement.",
+            later_map.map_focus,
+        )
+        self.assertEqual("The Saffron Passage", later_map.name)
+        self.assertTrue(later_map.is_editable)
+        self.assertEqual(["case-summary"], [item["id"] for item in later_map.opportunities])
+
+    def test_later_map_archiving_requires_a_reason_and_can_be_restored_while_open(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant", "summary": "A rough team note."}
+        )
+        workspace.start_later_map()
+
+        with self.assertRaisesRegex(ValueError, "Archive decision requires a reason"):
+            workspace.archive_inherited_opportunity(opportunity_id="case-summary", reason=" ")
+
+        archive = workspace.archive_inherited_opportunity(
+            opportunity_id="case-summary", reason="No longer fits the team’s current focus."
+        )
+        self.assertEqual("No longer fits the team’s current focus.", archive["reason"])
+        self.assertEqual([], workspace.current_iteration.opportunities)
+
+        restored = workspace.restore_inherited_opportunity("case-summary")
+        self.assertEqual("case-summary", restored["id"])
+        self.assertEqual(["case-summary"], [item["id"] for item in workspace.current_iteration.opportunities])
+
+    def test_later_map_requires_a_recorded_review_for_every_inherited_island(self):
+        workspace = self._workspace()
+        workspace.add_opportunity(
+            {"id": "case-summary", "title": "Case summary assistant", "summary": "A rough team note."}
+        )
+        workspace.start_later_map()
+
+        with self.assertRaisesRegex(ValueError, "Review every inherited Island"):
+            workspace.complete_carry_forward_review()
+
+        workspace.keep_inherited_opportunity("case-summary")
+        workspace.complete_carry_forward_review()
+
+        self.assertTrue(workspace.current_iteration.carry_forward_review_completed)
+
     @staticmethod
     def _workspace():
         return Workspace.start(

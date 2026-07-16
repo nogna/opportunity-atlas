@@ -2,11 +2,31 @@
 
 ## Workspace
 
-The single shared, persisted portfolio used by a team to compare AI use cases, adjust their evaluation rubric, and record its next bet through ordered Iterations. All team members who open the MVP can edit its current Iteration; prior Iterations are read-only history. The MVP has exactly one Workspace; workspace creation, selection, and tenant separation are out of scope.
+The single shared, persisted portfolio used by a team to explore AI use cases. It contains the current Opportunity Map and prior Map snapshots. The MVP has exactly one Workspace; workspace creation, selection, and tenant separation are out of scope.
 
 ## Iteration
 
-One long-lived, editable draft of the decision artifact, containing the Decision frame, Opportunities, Evaluation dimensions, weights, Assessments, Shortlist, and Archive decisions for an exploratory or evaluation cycle. It has an automatic sequential name and may have a custom name, which is editable only while the Iteration is a draft. An Iteration becomes set and read-only only when the team records one Next Opportunity decision. If no candidate is suitable, it remains a draft while the team records not-pursuing decisions or continues exploration. A new Iteration begins with a carry-forward review that records which inherited Opportunities to keep or archive, then copies the kept content as its editable starting point and records what changed. Iterations form one linear sequence, and their lineage prominently identifies the source Iteration, creation time, and reassessment trigger.
+The internal version of an Opportunity Map. A later Iteration snapshots the prior Map at the transition, inherits its Map focus and Islands for focused review, and remains editable. It has an old-atlas generated name that the team can immediately rename. Iterations form one linear sequence and retain their source Map.
+
+## Opportunity Map
+
+A living team space for exploring and evaluating possible AI use cases. It is the user-facing name for the current Iteration. A Map can remain editable after an Expedition; starting a later Map creates a separate snapshot rather than locking the prior Map.
+
+## Map focus
+
+The specific goal, problem, or question that an Opportunity Map explores. It may begin broad or narrow and relates the Map’s Islands to the North Star.
+
+## North Star
+
+The organization’s longer-lived AI vision or strategy that provides context for an Opportunity Map.
+
+## Island
+
+The user-facing representation of an Opportunity on a Map. An Island may begin as a short team note and become richer through team discussion and optional AI help.
+
+## Expedition
+
+A first-class, team-confirmed selection of Islands worth exploring or developing further. It preserves a snapshot of Map context without making the Map read-only.
 
 ## Decision frame
 

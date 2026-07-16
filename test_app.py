@@ -69,6 +69,20 @@ class PortfolioTests(unittest.TestCase):
         for opportunity in current.opportunities:
             self.assertTrue(opportunity["summary"])
 
+    def test_workspace_payload_exposes_later_map_review_items(self):
+        workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
+        workspace.start_later_map()
+
+        payload = app.workspace_payload(workspace)
+
+        self.assertEqual(2, payload["map"]["number"])
+        self.assertEqual(1, payload["map"]["source_number"])
+        self.assertTrue(payload["map"]["review_pending"])
+        self.assertEqual(
+            ["renewal-brief", "ticket-triage"],
+            [item["opportunity"]["id"] for item in payload["carry_forward_review"]],
+        )
+
     def test_auto_save_changes_the_editable_decision_frame_after_the_pause(self):
         workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
         collaboration = Collaboration()

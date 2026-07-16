@@ -33,6 +33,8 @@ class Iteration:
     decision_snapshot: dict | None = None
     archive_decisions: list[dict] = field(default_factory=list)
     inherited_opportunities: dict[str, dict] = field(default_factory=dict)
+    reviewed_inherited_opportunity_ids: list[str] = field(default_factory=list)
+    carry_forward_review_completed: bool = True
     # ``decision_frame.goal`` is retained only to read older persisted data.
     map_focus: str | None = None
 
@@ -146,6 +148,33 @@ class Workspace:
         if not what_changed.strip():
             raise ValueError("A new Iteration requires a what changed note.")
 
+        return self._copy_current_map(
+            custom_name=custom_name,
+            what_changed=what_changed,
+        )
+
+    def start_later_map(self, *, map_focus: str | None = None) -> Iteration:
+        """Open a later Opportunity Map from the current Map.
+
+        The focused carry-forward review is deliberately independent of an
+        Expedition or historical decision. A team may begin a fresh Map when
+        its exploration has moved on, then decide Island-by-Island what still
+        belongs in the new Map.
+        """
+        focus = self.current_iteration.map_focus if map_focus is None else map_focus.strip()
+        if not focus:
+            raise ValueError("Map focus cannot be empty.")
+        return self._copy_current_map(map_focus=focus)
+
+    def _copy_current_map(
+        self,
+        *,
+        map_focus: str | None = None,
+        custom_name: str | None = None,
+        what_changed: str | None = None,
+    ) -> Iteration:
+        """Snapshot the current Map as the editable starting point for a later Map."""
+        source = self.current_iteration
         next_iteration = Iteration(
             number=source.number + 1,
             decision_frame=deepcopy(source.decision_frame),
@@ -154,7 +183,7 @@ class Workspace:
             assessments=deepcopy(source.assessments),
             shortlist=deepcopy(source.shortlist),
             custom_name=custom_name,
-            map_focus=deepcopy(source.map_focus),
+            map_focus=deepcopy(source.map_focus if map_focus is None else map_focus),
             what_changed=what_changed,
             source_iteration_number=source.number,
             created_at=self._timestamp(),
@@ -166,6 +195,7 @@ class Workspace:
                 }
                 for opportunity in source.opportunities
             },
+            carry_forward_review_completed=False,
         )
         self.iterations.append(next_iteration)
         return next_iteration
@@ -190,6 +220,7 @@ class Workspace:
                     opportunity_id in archive_by_id
                     and archive_by_id[opportunity_id].get("restored_at") is None
                 ),
+                "reviewed": opportunity_id in current.reviewed_inherited_opportunity_ids,
             }
             for opportunity_id, inherited in sorted(current.inherited_opportunities.items())
         ]
@@ -231,7 +262,27 @@ class Workspace:
             "archived_at": self._timestamp(),
         }
         current.archive_decisions.append(archive)
+        self._mark_inherited_opportunity_reviewed(current, opportunity_id)
         return archive
+
+    def keep_inherited_opportunity(self, opportunity_id: str) -> None:
+        """Record the default decision to retain one inherited Island."""
+        current = self.current_iteration
+        self._require_editable_carry_forward_draft(current)
+        if opportunity_id not in current.inherited_opportunities:
+            raise ValueError("Only inherited Opportunities can be kept during carry-forward review.")
+        self._mark_inherited_opportunity_reviewed(current, opportunity_id)
+
+    def complete_carry_forward_review(self) -> None:
+        """Open the later Map after every inherited Island has been reviewed."""
+        current = self.current_iteration
+        self._require_editable_carry_forward_draft(current)
+        outstanding = set(current.inherited_opportunities) - set(
+            current.reviewed_inherited_opportunity_ids
+        )
+        if outstanding:
+            raise ValueError("Review every inherited Island before opening this Map.")
+        current.carry_forward_review_completed = True
 
     def restore_inherited_opportunity(self, opportunity_id: str) -> dict:
         """Restore an archived inherited Opportunity into the current draft."""
@@ -269,6 +320,11 @@ class Workspace:
             for key in summary_keys
             if key in opportunity
         }
+
+    @staticmethod
+    def _mark_inherited_opportunity_reviewed(iteration: Iteration, opportunity_id: str) -> None:
+        if opportunity_id not in iteration.reviewed_inherited_opportunity_ids:
+            iteration.reviewed_inherited_opportunity_ids.append(opportunity_id)
 
     @staticmethod
     def _require_editable_carry_forward_draft(iteration: Iteration) -> None:

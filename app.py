@@ -99,11 +99,19 @@ def workspace_payload(workspace: Workspace) -> dict:
     current = workspace.current_iteration
     payload["ranking"] = workspace.current_ranking() if current.dimensions else []
     payload["map"] = {
+        "number": current.number,
         "name": current.name,
         "focus": current.map_focus,
         "north_star": current.north_star,
         "is_editable": current.is_editable,
+        "source_number": current.source_iteration_number,
+        "review_pending": not current.carry_forward_review_completed,
     }
+    payload["carry_forward_review"] = (
+        workspace.review_inherited_opportunities()
+        if current.source_iteration_number is not None
+        else []
+    )
     return payload
 
 
@@ -213,6 +221,11 @@ class AppHandler(SimpleHTTPRequestHandler):
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.CREATED, workspace_payload(workspace))
+            if self.path == "/api/workspace/later-map":
+                workspace = load_workspace()
+                workspace.start_later_map(map_focus=payload.get("focus"))
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.CREATED, workspace_payload(workspace))
             if self.path == "/api/workspace/rubric":
                 workspace = load_workspace()
                 if not workspace.current_iteration.is_editable:
@@ -261,6 +274,16 @@ class AppHandler(SimpleHTTPRequestHandler):
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, {"archive": archive, **workspace_payload(workspace)})
+            if self.path == "/api/workspace/keep":
+                workspace = load_workspace()
+                workspace.keep_inherited_opportunity(payload["opportunity_id"])
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/carry-forward/complete":
+                workspace = load_workspace()
+                workspace.complete_carry_forward_review()
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
             if self.path == "/api/workspace/restore":
                 workspace = load_workspace()
                 opportunity = workspace.restore_inherited_opportunity(payload["opportunity_id"])

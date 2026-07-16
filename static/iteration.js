@@ -19,6 +19,8 @@ function currentMap(payload) {
     mapFocus: map.focus,
     northStar: map.north_star,
     opportunities: iteration.opportunities,
+    sourceNumber: map.source_number,
+    reviewPending: map.review_pending,
   };
 }
 
@@ -31,6 +33,7 @@ function islandMarkup(opportunity, index) {
 function render(payload) {
   workspace = payload;
   const map = currentMap(payload);
+  const archivedCount = (payload.carry_forward_review || []).filter(item => item.archived).length;
   $('#map-app').innerHTML = `
     <section class="map-intro">
       <div class="map-title-row"><p class="eyebrow">YOUR OPPORTUNITY MAP</p><label class="map-name-label"><span class="sr-only">Map name</span><input id="map-name" value="${escapeHtml(map.customName)}" placeholder="Name this Map"></label></div>
@@ -46,9 +49,14 @@ function render(payload) {
       ${map.opportunities.map(islandMarkup).join('')}
       <button class="add-island" id="add-island"><span>+</span>Add an opportunity</button>
       <p class="map-hint">Start with a rough idea. You can develop an Island together later.</p>
+    </section>
+    <section class="map-actions" aria-label="Map actions">
+      <button class="secondary" id="start-later-map">Start a new Map</button>
+      ${map.sourceNumber && archivedCount ? `<button class="secondary" id="review-archives">Review ${archivedCount} archived Island${archivedCount === 1 ? '' : 's'}</button>` : ''}
     </section>`;
 
   bindMapInteractions();
+  if (map.reviewPending) showIslandReview();
 }
 
 function bindMapInteractions() {
@@ -57,9 +65,118 @@ function bindMapInteractions() {
     $(`#${id}`).addEventListener('blur', saveMap);
   });
   $('#add-island').addEventListener('click', openAddIsland);
+  $('#start-later-map').addEventListener('click', openLaterMapStart);
+  const reviewArchives = $('#review-archives');
+  if (reviewArchives) reviewArchives.addEventListener('click', openArchiveRegister);
   document.querySelectorAll('[data-island-id]').forEach(island => {
     island.addEventListener('click', () => openIsland(island.dataset.islandId));
   });
+}
+
+function journeyDialog() {
+  return $('#journey-dialog');
+}
+
+function openLaterMapStart() {
+  const map = currentMap(workspace);
+  const dialog = journeyDialog();
+  dialog.innerHTML = `<form id="later-map-start"><button type="button" class="dialog-close" id="close-journey" aria-label="Close">×</button><p class="eyebrow">START A NEW MAP</p><h2>Where should the next Map point?</h2><p class="dialog-intro">Keep the focus from the previous Map, or reshape it for what the team needs now.</p><label>Keep the focus from the previous Map?<textarea name="focus" required maxlength="800">${escapeHtml(map.mapFocus)}</textarea></label><p class="form-error" id="journey-error" role="alert"></p><button class="primary" type="submit">Review inherited Islands</button></form>`;
+  dialog.showModal();
+  $('#close-journey').addEventListener('click', () => dialog.close());
+  $('#later-map-start').addEventListener('submit', beginLaterMap);
+}
+
+async function beginLaterMap(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    form.querySelector('button[type="submit"]').disabled = true;
+    workspace = await post('/api/workspace/later-map', {focus: new FormData(form).get('focus').trim()});
+    showIslandReview();
+  } catch (error) {
+    $('#journey-error').textContent = error.message;
+    form.querySelector('button[type="submit"]').disabled = false;
+  }
+}
+
+function reviewableIslands() {
+  return (workspace.carry_forward_review || []).filter(item => !item.reviewed);
+}
+
+function keepJourneyOpen(dialog) {
+  dialog.addEventListener('cancel', event => event.preventDefault());
+}
+
+async function showIslandReview() {
+  const islands = reviewableIslands();
+  if (!islands.length) {
+    workspace = await post('/api/workspace/carry-forward/complete', {});
+    return showMapReady();
+  }
+  const reviewedCount = (workspace.carry_forward_review || []).length - islands.length;
+  const item = islands[0];
+  const island = item.opportunity;
+  const dialog = journeyDialog();
+  dialog.innerHTML = `<section class="journey-step"><p class="eyebrow">INHERITED ISLAND ${reviewedCount + 1} OF ${(workspace.carry_forward_review || []).length}</p><h2>${escapeHtml(island.title)}</h2><p class="journey-note">${escapeHtml(island.detail || island.description || island.summary || 'No note recorded.')}</p><p class="dialog-intro">Keep this Island on the new Map by default, or archive it if it no longer belongs.</p><div class="journey-actions"><button class="primary" id="keep-island">Keep on this Map</button><button class="secondary" id="archive-island">Archive Island</button></div></section>`;
+  if (!dialog.open) {
+    dialog.showModal();
+    keepJourneyOpen(dialog);
+  }
+  $('#keep-island').addEventListener('click', async () => {
+    workspace = await post('/api/workspace/keep', {opportunity_id: island.id});
+    showIslandReview();
+  });
+  $('#archive-island').addEventListener('click', () => showArchiveReason(item));
+}
+
+function showArchiveReason(item) {
+  const island = item.opportunity;
+  const dialog = journeyDialog();
+  dialog.innerHTML = `<form id="archive-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-journey" aria-label="Close">×</button><p class="eyebrow">ARCHIVE ISLAND</p><h2>Why archive ${escapeHtml(island.title)}?</h2><p class="dialog-intro">This short reason stays with the new Map. You can restore the Island while this Map is open.</p><label>Archive reason<textarea name="reason" required maxlength="500" placeholder="e.g. This no longer fits the focus of this Map."></textarea></label><p class="form-error" id="journey-error" role="alert"></p><div class="journey-actions"><button class="primary" type="submit">Archive Island</button><button class="secondary" type="button" id="back-to-island">Back</button></div></form>`;
+  $('#close-journey').addEventListener('click', () => showIslandReview());
+  $('#back-to-island').addEventListener('click', () => showIslandReview());
+  $('#archive-island-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      form.querySelector('button[type="submit"]').disabled = true;
+      workspace = await post('/api/workspace/archive', {opportunity_id: form.dataset.islandId, reason: new FormData(form).get('reason').trim()});
+      showIslandReview();
+    } catch (error) {
+      $('#journey-error').textContent = error.message;
+      form.querySelector('button[type="submit"]').disabled = false;
+    }
+  });
+}
+
+function showMapReady() {
+  const map = currentMap(workspace);
+  const dialog = journeyDialog();
+  dialog.innerHTML = `<form id="map-ready-form"><p class="eyebrow">MAP READY</p><h2>${escapeHtml(map.name)}</h2><p class="dialog-intro">Your new Map is open for exploration. Name it now, or keep the atlas suggestion.</p><label>Name this Map<input name="name" required maxlength="120" value="${escapeHtml(map.name)}"></label><p class="form-error" id="journey-error" role="alert"></p><button class="primary" type="submit">Open this Map</button></form>`;
+  $('#map-ready-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    try {
+      workspace = await post('/api/workspace/map', {name: new FormData(form).get('name').trim(), focus: map.mapFocus});
+      dialog.close();
+      render(workspace);
+    } catch (error) {
+      $('#journey-error').textContent = error.message;
+    }
+  });
+}
+
+function openArchiveRegister() {
+  const archived = (workspace.carry_forward_review || []).filter(item => item.archived);
+  const dialog = journeyDialog();
+  dialog.innerHTML = `<section class="journey-step"><button type="button" class="dialog-close" id="close-journey" aria-label="Close">×</button><p class="eyebrow">ARCHIVED ISLANDS</p><h2>Still within reach</h2><p class="dialog-intro">Archived Islands are excluded from this Map, but you can restore them while it remains open.</p>${archived.map(item => `<article class="archive-entry"><strong>${escapeHtml(item.opportunity.title)}</strong><p>${escapeHtml(item.opportunity.summary || item.opportunity.description || '')}</p><button class="secondary" data-restore-id="${escapeHtml(item.opportunity.id)}">Restore to this Map</button></article>`).join('')}</section>`;
+  dialog.showModal();
+  $('#close-journey').addEventListener('click', () => dialog.close());
+  dialog.querySelectorAll('[data-restore-id]').forEach(button => button.addEventListener('click', async () => {
+    workspace = await post('/api/workspace/restore', {opportunity_id: button.dataset.restoreId});
+    dialog.close();
+    render(workspace);
+  }));
 }
 
 function scheduleMapSave() {

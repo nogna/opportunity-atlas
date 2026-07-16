@@ -18,7 +18,7 @@ The Workspace's longer-lived AI vision or strategy. It gives the Map strategic c
 
 ## Island
 
-The user-facing, old-atlas representation of one possible AI opportunity on an Opportunity Map. An Island may begin as a short team note and become richer through team discussion and optional AI help. Its evaluation values belong to the Island itself.
+The user-facing, old-atlas representation of one possible AI opportunity on an Opportunity Map. An Island may begin as a short team note and become richer through team discussion and optional AI help. AI guides people to turn the note into an opportunity hypothesis: the workflow or problem, an AI-enabled change, a possible outcome, and useful evidence or unknowns. Its evaluation values belong to the Island itself.
 
 ## Archived Island
 
@@ -28,13 +28,13 @@ An Island the team has removed from the active Map because it no longer belongs.
 
 A first-class, team-confirmed, evidence-seeking mission from an Opportunity Map. It selects the Islands the team intends to explore or develop further, has a required short goal, and may include an optional intended outcome. It frames a focused hypothesis about how an AI-enabled workflow change could create value, rather than a ranked shortlist or a collection of pilots. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
 
-## Workflow hypothesis
+## Opportunity hypothesis
 
-The concise link within an Expedition between today's way of working, an AI-enabled change, and the intended outcome. It makes the team test whether changing the workflow—not merely deploying a tool—could create value.
+The concise link on an Island between today's way of working or problem, an AI-enabled change, and a possible outcome. It helps the team test whether changing the workflow—not merely deploying a tool—could create value.
 
 ## Value evidence
 
-The practical signal an Expedition will use to learn whether its workflow hypothesis is working. It may be a measurable result or an observable outcome; it is not required to be a formal ROI calculation.
+The practical signal attached to an Island that can help the team learn whether its opportunity hypothesis is working. It may be a measurable result or an observable outcome; it is not required to be a formal ROI calculation.
 
 ## Map changes
 

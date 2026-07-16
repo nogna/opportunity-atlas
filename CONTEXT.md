@@ -18,7 +18,15 @@ The Workspace's longer-lived AI vision or strategy. It gives the Map strategic c
 
 ## Island
 
-The user-facing, old-atlas representation of one possible AI opportunity on an Opportunity Map. An Island may begin as a short team note and become richer through team discussion and optional AI help. AI guides people to turn the note into an opportunity hypothesis: the workflow or problem, an AI-enabled change, a possible outcome, and useful evidence or unknowns. Its evaluation values belong to the Island itself.
+The user-facing, old-atlas representation of one prepared AI opportunity on an Opportunity Map. An Island is created when the team promotes a Scouting note after working through its evidence and opportunity hypothesis. AI can guide that work, but the team decides whether the note is ready to become an Island. An Island holds its evaluation values.
+
+## Scouting note
+
+A lightweight, team-authored placeholder for a possible Island. It captures an early observation, idea, or prompt to explore but does not yet claim to be an opportunity on the Map. A Scouting note is developed through an Evidence board and guided hypothesis before the team may promote it to an Island.
+
+## Evidence board
+
+The team-visible working area for developing a Scouting note. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct before the team assembles an opportunity hypothesis. AI may help organise or question this material but cannot turn a Scouting note into an Island.
 
 ## Archived Island
 
@@ -30,7 +38,7 @@ A first-class, team-confirmed, evidence-seeking mission from an Opportunity Map.
 
 ## Opportunity hypothesis
 
-The concise link on an Island between today's way of working or problem, an AI-enabled change, and a possible outcome. It helps the team test whether changing the workflow—not merely deploying a tool—could create value.
+The concise link assembled while developing a Scouting note: today's way of working or problem, an AI-enabled change, and a possible outcome. It helps the team test whether changing the workflow—not merely deploying a tool—could create value. A promoted Island retains this hypothesis.
 
 ## Value evidence
 

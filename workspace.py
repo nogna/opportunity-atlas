@@ -20,6 +20,22 @@ _ATLAS_MAP_NAMES = (
 # Chart Room may later add richer evidence and configurable lenses.
 ISLAND_EVALUATION_DIMENSION_IDS = ("value", "readiness", "effort")
 
+# The Chart Room holds only material a team has explicitly authored.  AI lenses
+# are deliberately not a persistence field: they remain transient guidance in
+# the interface until a person turns an idea into their own wording.
+CHART_ROOM_FIELD_IDS = (
+    "workflow_problem",
+    "ai_change",
+    "outcome",
+    "evidence",
+    "unknowns",
+    "workflow_sketch",
+    "readiness_data",
+    "safeguards_risk",
+    "ownership_adoption",
+    "learning_action",
+)
+
 
 @dataclass
 class Iteration:
@@ -341,6 +357,7 @@ class Workspace:
         next_move: str | None = None,
         ai_formulation: str | None = None,
         evaluation: dict | None = None,
+        chart_room: dict | None = None,
     ) -> dict:
         """Develop an Island while preserving its original team note.
 
@@ -366,7 +383,23 @@ class Workspace:
                 opportunity[key] = value.strip()
         if evaluation is not None:
             opportunity["evaluation"] = self._validated_evaluation(evaluation)
+        if chart_room is not None:
+            opportunity["chart_room"] = self._validated_chart_room(chart_room)
         return opportunity
+
+    @staticmethod
+    def _validated_chart_room(chart_room: dict) -> dict:
+        """Keep Chart Room material explicitly team-authored and inspectable."""
+        if not isinstance(chart_room, dict):
+            raise ValueError("Chart Room material must be an object.")
+        validated = {}
+        for field_id, value in chart_room.items():
+            if field_id not in CHART_ROOM_FIELD_IDS:
+                raise ValueError(f"Unknown Chart Room field '{field_id}'.")
+            if not isinstance(value, str):
+                raise ValueError("Chart Room fields must be text.")
+            validated[field_id] = value.strip()
+        return validated
 
     @staticmethod
     def _validated_evaluation(evaluation: dict) -> dict:

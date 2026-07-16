@@ -34,7 +34,11 @@ An Island the team has removed from the active Map because it no longer belongs.
 
 ## Expedition
 
-A first-class, team-confirmed, evidence-seeking mission from an Opportunity Map. It selects the Islands the team intends to explore or develop further, has a required short goal, and may include an optional intended outcome. It frames a focused hypothesis about how an AI-enabled workflow change could create value, rather than a ranked shortlist or a collection of pilots. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+A first-class, team-confirmed, evidence-seeking collection of selected Islands from an Opportunity Map. Its intent is expressed through an Island Charter for each selected Island, rather than through a generic Expedition mission or separate ranking model. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+
+## Island Charter
+
+A compact, Expedition-specific plan for one selected Island. It expresses what the team intends to learn or do next for that Island and may capture an intended outcome, participants, or decision evidence. It is time-specific to the Expedition and does not replace the durable opportunity hypothesis, evidence, or evaluation values held in the Island's Chart Room.
 
 ## Opportunity hypothesis
 

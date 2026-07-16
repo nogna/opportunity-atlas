@@ -4,6 +4,6 @@
 
 An Opportunity Map is a living atlas for one team or area. It remains editable throughout its life. Confirming an Expedition captures an immutable Map snapshot rather than setting the Map read-only or creating a manual Map version.
 
-An Expedition is a focused, evidence-seeking team commitment: it selects prepared Islands, has a required short goal, and may include an optional intended outcome. It does not repeat Island discovery or evaluation; an Island owns the opportunity hypothesis and its value evidence. Island evaluation values remain authored on the Map. Only one Expedition is active per Map; starting another makes the prior one past.
+An Expedition is a focused, evidence-seeking team commitment: it selects prepared Islands and records an Island Charter for each selected Island rather than a generic Expedition mission. It does not repeat Island discovery or evaluation; an Island owns the opportunity hypothesis and its value evidence. Island evaluation values remain authored on the Map. Only one Expedition is active per Map; starting another makes the prior one past.
 
 This preserves historical context and makes later Map changes comparable to an Expedition's snapshot without a mandatory change note, a ranking artifact, or an Iteration lifecycle.

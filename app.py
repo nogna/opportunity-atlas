@@ -276,6 +276,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                     next_move=payload.get("next_move"),
                     ai_formulation=payload.get("ai_formulation"),
                     evaluation=payload.get("evaluation"),
+                    chart_room=payload.get("chart_room"),
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, {"opportunity": opportunity})

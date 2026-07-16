@@ -121,6 +121,46 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
         restored = Workspace.from_dict(workspace.to_dict())
         self.assertEqual(island["evaluation"], restored.current_iteration.opportunities[0]["evaluation"])
 
+    def test_chart_room_persists_team_hypothesis_evidence_unknowns_and_optional_details(self):
+        workspace = self._workspace()
+        workspace.add_opportunity({"id": "case-summary", "title": "Case summary assistant"})
+
+        island = workspace.update_opportunity(
+            "case-summary",
+            chart_room={
+                "workflow_problem": "Escalation leads gather account context from three systems.",
+                "ai_change": "Draft a cited case summary for lead review.",
+                "outcome": "Leads begin escalation with a reliable shared brief.",
+                "evidence": "Two leads described the repeated context-gathering work.",
+                "unknowns": "We have not measured preparation time yet.",
+                "readiness_data": "Confirm read access and source consistency.",
+                "safeguards_risk": "A lead verifies every cited source before sending.",
+                "ownership_adoption": "Support operations owns the review routine.",
+                "learning_action": "Measure a week of current preparation time.",
+            },
+        )
+
+        self.assertEqual(
+            "Draft a cited case summary for lead review.",
+            island["chart_room"]["ai_change"],
+        )
+        self.assertNotIn("ai_suggestion", island["chart_room"])
+        restored = Workspace.from_dict(workspace.to_dict())
+        self.assertEqual(island["chart_room"], restored.current_iteration.opportunities[0]["chart_room"])
+
+    def test_chart_room_rejects_unknown_or_non_text_team_fields(self):
+        workspace = self._workspace()
+        workspace.add_opportunity({"id": "case-summary", "title": "Case summary assistant"})
+
+        with self.assertRaisesRegex(ValueError, "Unknown Chart Room field"):
+            workspace.update_opportunity(
+                "case-summary", chart_room={"ai_suggestion": "Pretend this is evidence."}
+            )
+        with self.assertRaisesRegex(ValueError, "must be text"):
+            workspace.update_opportunity(
+                "case-summary", chart_room={"evidence": ["not a team note"]}
+            )
+
     def test_island_evaluation_rejects_a_score_without_a_team_rationale(self):
         workspace = self._workspace()
         workspace.add_opportunity(

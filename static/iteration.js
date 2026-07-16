@@ -8,6 +8,20 @@ const DIMENSIONS = [
   ['readiness', 'Readiness', 'How prepared the team is to explore it.'],
   ['effort', 'Effort', 'Coordination and delivery effort required.'],
 ];
+const CHART_ROOM_FIELDS = [
+  ['workflow_problem', 'Workflow / problem today', 'Who does what today, where does friction or a decision sit, and who is affected?', 'core'],
+  ['ai_change', 'Possible AI-enabled change', 'Keep human accountability explicit. This is a proposal, not a promise.', 'core'],
+  ['outcome', 'Possible outcome', 'Use an observable or measurable benefit; a formal ROI forecast is not required.', 'core wide'],
+  ['evidence', 'Team evidence', 'Observations, links, or constraints the team can stand behind.', 'evidence'],
+  ['unknowns', 'Unknowns & assumptions', 'State what is missing or unverified instead of smoothing it over.', 'evidence'],
+];
+const CHART_ROOM_DETAILS = [
+  ['workflow_sketch', 'Workflow sketch', 'Clarify the handoff', 'Today → AI-enabled change → human review → outcome.'],
+  ['readiness_data', 'Readiness & data', 'Open when moving toward delivery', 'Check access, quality, consistency, retention, and the integrations needed for a useful review point.'],
+  ['safeguards_risk', 'Safeguards & risk', 'Open early for sensitive work', 'Name harms, oversight, escalation, and an accountable owner.'],
+  ['ownership_adoption', 'Ownership & adoption', 'Open when roles will change', 'Who reviews the result, who can override it, and what changes in their routine?'],
+  ['learning_action', 'Next learning action', 'Open when preparing an Expedition', 'Describe the smallest action that could strengthen or weaken this hypothesis.'],
+];
 
 async function post(path, body) {
   const response = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
@@ -97,12 +111,64 @@ function openIsland(islandId) {
   const map = currentMap(workspace);
   const island = map.islands.find(candidate => candidate.id === islandId);
   if (!island) return;
-  const originalNote = island.description || island.summary || 'This Island was created directly on the Map.';
+  const chartRoom = chartRoomWithStartingPoint(island);
   const dialog = $('#island-dialog');
-  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">ISLAND DETAILS</p><h2>Chart this Island</h2><label>Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="island-original-note"><span>INITIAL DESCRIPTION</span><p>${escapeHtml(originalNote)}</p></section><label>Team's current view<textarea name="detail" maxlength="1000" placeholder="Describe the opportunity as the team understands it today.">${escapeHtml(island.detail || '')}</textarea></label><section class="evaluation-section"><div class="section-heading"><p class="eyebrow">ISLAND VALUES</p><p>These stay with this Island on the Map. They are not an Expedition ranking.</p></div>${evaluationFields(island)}</section><p class="form-error" id="form-error" role="alert"></p><button class="primary" type="submit">Save Island</button></form>`;
+  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header><div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
   dialog.showModal();
   $('#close-dialog').addEventListener('click', () => dialog.close());
+  document.querySelectorAll('.ai-lens').forEach(button => button.addEventListener('click', () => showAiLens(button.dataset.lens)));
+  $('#toggle-ai-sidecar').addEventListener('click', toggleAiSidecar);
+  document.querySelectorAll('[name^="chart-"]').forEach(field => field.addEventListener('input', updateAiProgress));
+  updateAiProgress();
   $('#edit-island-form').addEventListener('submit', saveIsland);
+}
+
+function aiSidecarMarkup() {
+  return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>Guidance while you chart</h3><p>Suggestions are questions, never team content. You choose what to write, save, or ignore.</p></header><ol class="ai-progress" id="ai-progress"><li data-step="workflow_problem">Frame the workflow</li><li data-step="evidence">Separate evidence from assumptions</li><li data-step="outcome">Name a possible outcome</li><li data-step="learning_action">Choose a next learning action</li></ol><div class="ai-guidance"><p class="eyebrow">CURRENT LENS</p><p id="ai-guidance">Start with the work as it is today. What decision is delayed, and who is affected?</p></div><div class="ai-lenses"><button type="button" class="secondary ai-lens" data-lens="workflow">Workflow lens</button><button type="button" class="secondary ai-lens" data-lens="evidence">Evidence lens</button><button type="button" class="secondary ai-lens" data-lens="values">Value lens</button></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
+}
+
+function chartRoomWithStartingPoint(island) {
+  const chartRoom = {...(island.chart_room || {})};
+  if (!chartRoom.workflow_problem) {
+    // #25 direct creation predates the Chart Room.  Treat its team-authored
+    // Map description as a starting point, never as AI or Scouting-note data.
+    chartRoom.workflow_problem = island.detail || island.description || island.summary || '';
+  }
+  return chartRoom;
+}
+
+function chartRoomCoreFields(chartRoom) {
+  return CHART_ROOM_FIELDS.filter(([, , , group]) => group.startsWith('core')).map(([id, label, hint, group]) => `<label class="chart-field ${group}">${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small></label>`).join('');
+}
+
+function chartEvidenceFields(chartRoom) {
+  return CHART_ROOM_FIELDS.filter(([, , , group]) => group === 'evidence').map(([id, label, hint]) => `<section class="chart-evidence ${id === 'unknowns' ? 'chart-unknowns' : ''}"><label>${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small></label></section>`).join('');
+}
+
+function chartRoomDetails(chartRoom) {
+  return CHART_ROOM_DETAILS.map(([id, label, summary, hint]) => `<details class="chart-detail" ${chartRoom[id] ? 'open' : ''}><summary>${escapeHtml(label)}<span>${escapeHtml(summary)}</span></summary><label class="sr-only" for="chart-${id}">${escapeHtml(label)}</label><textarea id="chart-${id}" name="chart-${id}" maxlength="2000" placeholder="${escapeHtml(hint)}">${escapeHtml(chartRoom[id] || '')}</textarea></details>`).join('');
+}
+
+function showAiLens(lens) {
+  const guidance = {
+    workflow: 'Which delayed decision would change if this Island worked, who makes it, and what would they do differently?',
+    evidence: 'What observation, baseline, or accountable source would strengthen—or weaken—this opportunity hypothesis?',
+    values: 'Why is each value high or low? Check the rationale; only the team can change a score.',
+  };
+  $('#ai-guidance').textContent = guidance[lens];
+}
+
+function updateAiProgress() {
+  document.querySelectorAll('.ai-progress [data-step]').forEach(item => {
+    const value = document.querySelector(`[name="chart-${item.dataset.step}"]`)?.value.trim();
+    item.classList.toggle('complete', Boolean(value));
+  });
+}
+
+function toggleAiSidecar() {
+  const sidecar = $('#ai-sidecar');
+  const hidden = sidecar.classList.toggle('collapsed');
+  $('#toggle-ai-sidecar').textContent = hidden ? 'Show AI compass' : 'Hide AI compass';
 }
 
 async function addIsland(event) {
@@ -130,12 +196,20 @@ function evaluationFrom(form) {
   return result;
 }
 
+function chartRoomFrom(form) {
+  const result = {};
+  [...CHART_ROOM_FIELDS, ...CHART_ROOM_DETAILS].forEach(([id]) => {
+    result[id] = form.elements[`chart-${id}`].value.trim();
+  });
+  return result;
+}
+
 async function saveIsland(event) {
   event.preventDefault();
   const form = event.currentTarget;
   try {
     form.querySelector('button[type="submit"]').disabled = true;
-    await post(`/api/workspace/opportunities/${encodeURIComponent(form.dataset.islandId)}`, {title: form.elements.title.value.trim(), detail: form.elements.detail.value.trim(), evaluation: evaluationFrom(form)});
+    await post(`/api/workspace/opportunities/${encodeURIComponent(form.dataset.islandId)}`, {title: form.elements.title.value.trim(), evaluation: evaluationFrom(form), chart_room: chartRoomFrom(form)});
     $('#island-dialog').close();
     await loadWorkspace();
   } catch (error) {

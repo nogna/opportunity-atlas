@@ -266,6 +266,23 @@ class AppHandler(SimpleHTTPRequestHandler):
                 opportunity = workspace.add_opportunity(payload["opportunity"])
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.CREATED, {"opportunity": opportunity})
+            if self.path == "/api/workspace/scouting-notes":
+                workspace = load_workspace()
+                note = workspace.add_scouting_note(
+                    title=payload.get("title"),
+                    body=payload.get("body"),
+                    author=payload.get("author"),
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.CREATED, {"scouting_note": note})
+            if self.path == "/api/workspace/scouting-notes/transfer":
+                workspace = load_workspace()
+                island = workspace.transfer_scouting_note(
+                    note_id=payload.get("note_id"),
+                    island_title=payload.get("island_title"),
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.CREATED, {"opportunity": island})
             if self.path.startswith("/api/workspace/opportunities/"):
                 opportunity_id = unquote(self.path.rsplit("/", 1)[-1])
                 workspace = load_workspace()

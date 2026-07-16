@@ -32,7 +32,7 @@ async function post(path, body) {
 
 function currentMap(payload) {
   const iteration = payload.iterations.at(-1);
-  return {name: payload.map.name, northStar: payload.map.north_star, islands: iteration.opportunities};
+  return {name: payload.map.name, northStar: payload.map.north_star, islands: iteration.opportunities, scoutingNotes: iteration.scouting_notes || []};
 }
 
 function evaluationSummary(island) {
@@ -48,6 +48,22 @@ function islandMarkup(island, index) {
   return `<button class="island ${positions[index % positions.length]}" data-island-id="${escapeHtml(island.id)}" aria-label="Open Island: ${escapeHtml(island.title)}"><span class="island-shore"><span class="island-land"><span class="island-title">${escapeHtml(island.title)}</span><span class="island-note">${escapeHtml(description)}</span><span class="island-values">${evaluationSummary(island)}</span></span></span></button>`;
 }
 
+function scoutingNotesMarkup(notes) {
+  if (!notes.length) {
+    return `<p class="scouting-empty">A personal observation can wait here until the team is ready to chart it as an Island.</p>`;
+  }
+  return notes.map(note => {
+    const transferred = note.transferred_to_island_id;
+    return `<article class="scouting-note ${transferred ? 'scouting-note--transferred' : ''}">
+      <p class="eyebrow">${transferred ? 'NOW AN ISLAND' : 'PERSONAL SCOUTING NOTE'}</p>
+      <h3>${escapeHtml(note.title)}</h3><p>${escapeHtml(note.body)}</p>
+      <footer><span>Added by ${escapeHtml(note.author)}</span>${transferred
+        ? `<button class="text-button open-transferred-island" data-island-id="${escapeHtml(transferred)}">Open Island</button>`
+        : `<button class="secondary transfer-note" data-note-id="${escapeHtml(note.id)}">Chart as Island</button>`}</footer>
+    </article>`;
+  }).join('');
+}
+
 function render(payload) {
   workspace = payload;
   const map = currentMap(payload);
@@ -60,6 +76,10 @@ function render(payload) {
       <div class="compass" aria-hidden="true"><span>N</span><i></i></div>
       <div><p class="eyebrow">NORTH STAR · STRATEGIC CONTEXT</p><p class="north-star-copy">${escapeHtml(map.northStar || 'North Star context has not been set yet.')}</p></div>
     </section>
+    <section class="scouting-dock" aria-label="Personal Scouting notes">
+      <div class="scouting-dock-heading"><div><p class="eyebrow">BEFORE EXPEDITION PLANNING</p><h2>Scouting notes</h2><p>Personal early signals—not yet Islands and not team evidence.</p></div><button class="secondary" id="add-scouting-note">+ Add a note</button></div>
+      <div class="scouting-notes">${scoutingNotesMarkup(map.scoutingNotes)}</div>
+    </section>
     <section class="map-board" aria-label="Island map">
       <div class="board-label"><span>THE SEA OF POSSIBILITIES</span><span>${map.islands.length} Island${map.islands.length === 1 ? '' : 's'} charted</span></div>
       <div class="waves waves--one"></div><div class="waves waves--two"></div>
@@ -68,9 +88,34 @@ function render(payload) {
       <p class="map-hint">Each Island holds its own visible values and the team's reasons for them.</p>
     </section>`;
   $('#add-island').addEventListener('click', openAddIsland);
+  $('#add-scouting-note').addEventListener('click', openAddScoutingNote);
   document.querySelectorAll('[data-island-id]').forEach(island => island.addEventListener('click', () => openIsland(island.dataset.islandId)));
+  document.querySelectorAll('.transfer-note').forEach(button => button.addEventListener('click', () => openTransferScoutingNote(button.dataset.noteId)));
+  document.querySelectorAll('.open-transferred-island').forEach(button => button.addEventListener('click', () => openIsland(button.dataset.islandId)));
   $('#map-name').addEventListener('input', scheduleMapNameSave);
   $('#map-name').addEventListener('blur', saveMapName);
+}
+
+function rememberedScoutName() {
+  return localStorage.getItem('opportunity-atlas-scout-name') || '';
+}
+
+function openAddScoutingNote() {
+  const dialog = $('#island-dialog');
+  dialog.innerHTML = `<form id="add-scouting-note-form"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">PERSONAL SCOUTING NOTE</p><h2>Leave a signal for the team</h2><p class="dialog-intro">Capture an observation or idea before Expedition planning. This is yours; it does not appear on the Map until someone explicitly charts it as an Island.</p><label>Your name<input name="author" required maxlength="120" value="${escapeHtml(rememberedScoutName())}" placeholder="The person adding this note"></label><label>Short title<input name="title" required maxlength="120" placeholder="e.g. Patterns in escalations"></label><label>Your note<textarea name="body" required maxlength="2000" placeholder="What did you notice, wonder about, or want the team to explore?"></textarea></label><p class="form-error" id="form-error" role="alert"></p><button class="primary" type="submit">Save Scouting note</button></form>`;
+  dialog.showModal();
+  $('#close-dialog').addEventListener('click', () => dialog.close());
+  $('#add-scouting-note-form').addEventListener('submit', addScoutingNote);
+}
+
+function openTransferScoutingNote(noteId) {
+  const note = currentMap(workspace).scoutingNotes.find(candidate => candidate.id === noteId);
+  if (!note) return;
+  const dialog = $('#island-dialog');
+  dialog.innerHTML = `<form id="transfer-scouting-note-form" data-note-id="${escapeHtml(note.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">CHART AN ISLAND FROM A NOTE</p><h2>Transfer “${escapeHtml(note.title)}”</h2><p class="dialog-intro">This explicit action creates an Island. The original personal note stays visible on it as provenance, separate from later team evidence.</p><label>Island name<input name="island-title" required maxlength="120" value="${escapeHtml(note.title)}"></label><p class="form-error" id="form-error" role="alert"></p><button class="primary" type="submit">Create and open Island</button></form>`;
+  dialog.showModal();
+  $('#close-dialog').addEventListener('click', () => dialog.close());
+  $('#transfer-scouting-note-form').addEventListener('submit', transferScoutingNote);
 }
 
 function scheduleMapNameSave() {
@@ -113,7 +158,7 @@ function openIsland(islandId) {
   if (!island) return;
   const chartRoom = chartRoomWithStartingPoint(island);
   const dialog = $('#island-dialog');
-  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header><div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
+  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header>${scoutingNoteProvenance(island)}<div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
   dialog.showModal();
   $('#close-dialog').addEventListener('click', () => dialog.close());
   document.querySelectorAll('.ai-lens').forEach(button => button.addEventListener('click', () => showAiLens(button.dataset.lens)));
@@ -123,13 +168,19 @@ function openIsland(islandId) {
   $('#edit-island-form').addEventListener('submit', saveIsland);
 }
 
+function scoutingNoteProvenance(island) {
+  const note = island.scouting_note;
+  if (!note) return '';
+  return `<aside class="scouting-provenance"><p class="eyebrow">FROM A PERSONAL SCOUTING NOTE</p><h3>${escapeHtml(note.title)}</h3><blockquote>${escapeHtml(note.body)}</blockquote><p>Added by ${escapeHtml(note.author)}. This original note is retained as provenance; it is not team evidence. Record the team’s view below.</p></aside>`;
+}
+
 function aiSidecarMarkup() {
   return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>Guidance while you chart</h3><p>Suggestions are questions, never team content. You choose what to write, save, or ignore.</p></header><ol class="ai-progress" id="ai-progress"><li data-step="workflow_problem">Frame the workflow</li><li data-step="evidence">Separate evidence from assumptions</li><li data-step="outcome">Name a possible outcome</li><li data-step="learning_action">Choose a next learning action</li></ol><div class="ai-guidance"><p class="eyebrow">CURRENT LENS</p><p id="ai-guidance">Start with the work as it is today. What decision is delayed, and who is affected?</p></div><div class="ai-lenses"><button type="button" class="secondary ai-lens" data-lens="workflow">Workflow lens</button><button type="button" class="secondary ai-lens" data-lens="evidence">Evidence lens</button><button type="button" class="secondary ai-lens" data-lens="values">Value lens</button></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
 }
 
 function chartRoomWithStartingPoint(island) {
   const chartRoom = {...(island.chart_room || {})};
-  if (!chartRoom.workflow_problem) {
+  if (!chartRoom.workflow_problem && !island.scouting_note) {
     // #25 direct creation predates the Chart Room.  Treat its team-authored
     // Map description as a starting point, never as AI or Scouting-note data.
     chartRoom.workflow_problem = island.detail || island.description || island.summary || '';
@@ -180,6 +231,37 @@ async function addIsland(event) {
     await post('/api/workspace/opportunities', {opportunity: {id: `island-${Date.now()}`, title: values.title.trim(), description: values.description.trim()}});
     $('#island-dialog').close();
     await loadWorkspace();
+  } catch (error) {
+    $('#form-error').textContent = error.message;
+    form.querySelector('button[type="submit"]').disabled = false;
+  }
+}
+
+async function addScoutingNote(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  try {
+    form.querySelector('button[type="submit"]').disabled = true;
+    await post('/api/workspace/scouting-notes', {title: values.title.trim(), body: values.body.trim(), author: values.author.trim()});
+    localStorage.setItem('opportunity-atlas-scout-name', values.author.trim());
+    $('#island-dialog').close();
+    await loadWorkspace();
+  } catch (error) {
+    $('#form-error').textContent = error.message;
+    form.querySelector('button[type="submit"]').disabled = false;
+  }
+}
+
+async function transferScoutingNote(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    form.querySelector('button[type="submit"]').disabled = true;
+    const result = await post('/api/workspace/scouting-notes/transfer', {note_id: form.dataset.noteId, island_title: form.elements['island-title'].value.trim()});
+    $('#island-dialog').close();
+    await loadWorkspace();
+    openIsland(result.opportunity.id);
   } catch (error) {
     $('#form-error').textContent = error.message;
     form.querySelector('button[type="submit"]').disabled = false;

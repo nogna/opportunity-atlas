@@ -57,6 +57,10 @@ class Iteration:
     # Lightweight, individually authored inputs stay separate from the Map
     # until somebody explicitly transfers one into an Island.
     scouting_notes: list[dict] = field(default_factory=list)
+    # Expeditions preserve a time-specific commitment without freezing the Map.
+    # The active Expedition is the most recent confirmed one; earlier ones are
+    # retained as past records rather than being rewritten when the Map moves.
+    expeditions: list[dict] = field(default_factory=list)
     # ``decision_frame.goal`` is retained only to read older persisted data.
     map_focus: str | None = None
 
@@ -352,6 +356,74 @@ class Workspace:
         current.opportunities.append(deepcopy(opportunity))
         return current.opportunities[-1]
 
+    @property
+    def current_expedition(self) -> dict | None:
+        """Return the Map's one active Expedition, if a team has confirmed one."""
+        return next(
+            (
+                expedition
+                for expedition in reversed(self.current_iteration.expeditions)
+                if expedition.get("status") == "active"
+            ),
+            None,
+        )
+
+    def confirm_expedition(self, *, charters: list[dict]) -> dict:
+        """Confirm Island-specific Charters and preserve the current Map state.
+
+        An Expedition does not formulate a new Map-wide goal or recalculate an
+        Island ranking. Each Charter simply says what the team will learn or do
+        next for one selected, already-charted Island.
+        """
+        if not isinstance(charters, list) or not charters:
+            raise ValueError("An Expedition needs at least one Island Charter.")
+
+        current = self.current_iteration
+        known_islands = {island["id"] for island in current.opportunities}
+        validated_charters = []
+        selected_island_ids = set()
+        optional_fields = ("participants", "intended_outcome", "decision_evidence")
+        for charter in charters:
+            if not isinstance(charter, dict):
+                raise ValueError("Each Island Charter must be an object.")
+            island_id = charter.get("island_id")
+            if island_id not in known_islands:
+                raise ValueError("A selected Island does not belong to this Map.")
+            if island_id in selected_island_ids:
+                raise ValueError("An Island can have only one Charter in an Expedition.")
+            action = charter.get("next_learning_action")
+            if not isinstance(action, str) or not action.strip():
+                raise ValueError("Each Island Charter needs a next learning action.")
+            normalized = {"island_id": island_id, "next_learning_action": action.strip()}
+            for field_name in optional_fields:
+                value = charter.get(field_name, "")
+                if not isinstance(value, str):
+                    raise ValueError("Island Charter fields must be text.")
+                normalized[field_name] = value.strip()
+            selected_island_ids.add(island_id)
+            validated_charters.append(normalized)
+
+        active = self.current_expedition
+        if active is not None:
+            active["status"] = "past"
+            active["became_past_at"] = self._timestamp()
+
+        snapshot = {
+            "name": current.name,
+            "north_star": current.north_star,
+            "islands": deepcopy(current.opportunities),
+        }
+        expedition = {
+            "id": f"expedition-{uuid4().hex}",
+            "status": "active",
+            "selected_island_ids": [charter["island_id"] for charter in validated_charters],
+            "charters": validated_charters,
+            "map_snapshot": snapshot,
+            "confirmed_at": self._timestamp(),
+        }
+        current.expeditions.append(expedition)
+        return expedition
+
     def add_scouting_note(self, *, title: str, body: str, author: str) -> dict:
         """Capture an individual's early thought without adding an Island.
 
@@ -484,6 +556,7 @@ class Workspace:
         for item in payload["iterations"]:
             serialized = deepcopy(item)
             serialized.setdefault("scouting_notes", [])
+            serialized.setdefault("expeditions", [])
             # Old persisted Workspaces stored focus only in the Decision Frame.
             serialized.setdefault("map_focus", serialized.get("decision_frame", {}).get("goal"))
             # A short-lived prototype stored North Star on the Iteration. Keep

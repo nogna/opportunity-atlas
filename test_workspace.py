@@ -161,6 +161,57 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
                 "case-summary", chart_room={"evidence": ["not a team note"]}
             )
 
+    def test_team_member_can_capture_a_scouting_note_before_it_is_an_island(self):
+        workspace = self._workspace()
+
+        note = workspace.add_scouting_note(
+            title="A rough thought from the support floor",
+            body="Could AI help spot patterns in escalations before the weekly review?",
+            author="Mika",
+        )
+
+        self.assertEqual("Mika", note["author"])
+        self.assertIsNone(note["transferred_to_island_id"])
+        self.assertEqual([], workspace.current_iteration.opportunities)
+
+        restored = Workspace.from_dict(workspace.to_dict())
+        self.assertEqual(note, restored.current_iteration.scouting_notes[0])
+
+    def test_explicit_transfer_creates_an_island_and_preserves_note_as_provenance(self):
+        workspace = self._workspace()
+        note = workspace.add_scouting_note(
+            title="Escalation signals",
+            body="Could AI help spot patterns in escalations before the weekly review?",
+            author="Mika",
+        )
+
+        island = workspace.transfer_scouting_note(
+            note_id=note["id"], island_title="Escalation signal triage"
+        )
+
+        self.assertEqual("Escalation signal triage", island["title"])
+        self.assertEqual(note["id"], island["scouting_note"]["id"])
+        self.assertEqual("Mika", island["scouting_note"]["author"])
+        self.assertEqual(note["body"], island["scouting_note"]["body"])
+        self.assertNotIn("evidence", island.get("chart_room", {}))
+        self.assertEqual(island["id"], workspace.current_iteration.scouting_notes[0]["transferred_to_island_id"])
+
+        restored = Workspace.from_dict(workspace.to_dict())
+        self.assertEqual(note["body"], restored.current_iteration.opportunities[0]["scouting_note"]["body"])
+
+    def test_scouting_note_transfer_rejects_blank_fields_and_a_second_transfer(self):
+        workspace = self._workspace()
+        with self.assertRaisesRegex(ValueError, "Scouting note needs"):
+            workspace.add_scouting_note(title="", body="A thought", author="Mika")
+
+        note = workspace.add_scouting_note(title="A thought", body="Explore this", author="Mika")
+        with self.assertRaisesRegex(ValueError, "Island needs a name"):
+            workspace.transfer_scouting_note(note_id=note["id"], island_title=" ")
+
+        workspace.transfer_scouting_note(note_id=note["id"], island_title="A real Island")
+        with self.assertRaisesRegex(ValueError, "already been transferred"):
+            workspace.transfer_scouting_note(note_id=note["id"], island_title="Another Island")
+
     def test_island_evaluation_rejects_a_score_without_a_team_rationale(self):
         workspace = self._workspace()
         workspace.add_opportunity(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from ranking import rank_opportunities
 
@@ -53,6 +54,9 @@ class Iteration:
     decision_snapshot: dict | None = None
     archive_decisions: list[dict] = field(default_factory=list)
     inherited_opportunities: dict[str, dict] = field(default_factory=dict)
+    # Lightweight, individually authored inputs stay separate from the Map
+    # until somebody explicitly transfers one into an Island.
+    scouting_notes: list[dict] = field(default_factory=list)
     # ``decision_frame.goal`` is retained only to read older persisted data.
     map_focus: str | None = None
 
@@ -348,6 +352,56 @@ class Workspace:
         current.opportunities.append(deepcopy(opportunity))
         return current.opportunities[-1]
 
+    def add_scouting_note(self, *, title: str, body: str, author: str) -> dict:
+        """Capture an individual's early thought without adding an Island.
+
+        A Scouting note is intentionally not team-authored Map material.  It
+        only becomes an Island through ``transfer_scouting_note`` below.
+        """
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("A Scouting note needs a title.")
+        if not isinstance(body, str) or not body.strip():
+            raise ValueError("A Scouting note needs some text.")
+        if not isinstance(author, str) or not author.strip():
+            raise ValueError("A Scouting note needs its author's name.")
+        note = {
+            "id": f"note-{uuid4().hex}",
+            "title": title.strip(),
+            "body": body.strip(),
+            "author": author.strip(),
+            "created_at": self._timestamp(),
+            "transferred_to_island_id": None,
+        }
+        self.current_iteration.scouting_notes.append(note)
+        return note
+
+    def transfer_scouting_note(self, *, note_id: str, island_title: str) -> dict:
+        """Create an Island explicitly and retain the note as provenance."""
+        if not isinstance(island_title, str) or not island_title.strip():
+            raise ValueError("An Island needs a name.")
+        note = next(
+            (candidate for candidate in self.current_iteration.scouting_notes if candidate["id"] == note_id),
+            None,
+        )
+        if note is None:
+            raise ValueError("The Scouting note does not belong to this Map.")
+        if note.get("transferred_to_island_id"):
+            raise ValueError("This Scouting note has already been transferred into an Island.")
+
+        island = self.add_opportunity(
+            {
+                "id": f"island-{uuid4().hex}",
+                "title": island_title.strip(),
+                "description": note["body"],
+                # Keep the original contribution intact and visibly distinct
+                # from later team-authored evidence or Chart Room material.
+                "scouting_note": deepcopy(note),
+            }
+        )
+        note["transferred_to_island_id"] = island["id"]
+        island["scouting_note"]["transferred_to_island_id"] = island["id"]
+        return island
+
     def update_opportunity(
         self,
         opportunity_id: str,
@@ -429,6 +483,7 @@ class Workspace:
         iterations = []
         for item in payload["iterations"]:
             serialized = deepcopy(item)
+            serialized.setdefault("scouting_notes", [])
             # Old persisted Workspaces stored focus only in the Decision Frame.
             serialized.setdefault("map_focus", serialized.get("decision_frame", {}).get("goal"))
             # A short-lived prototype stored North Star on the Iteration. Keep

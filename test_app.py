@@ -73,6 +73,17 @@ class PortfolioTests(unittest.TestCase):
                 all(value["rationale"] for value in opportunity["evaluation"].values())
             )
 
+    def test_workspace_payload_exposes_untransferred_scouting_notes_without_making_them_islands(self):
+        workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
+        workspace.add_scouting_note(
+            title="A useful signal", body="A teammate noticed repeated escalation work.", author="Mika"
+        )
+
+        payload = app.workspace_payload(workspace)
+
+        self.assertEqual("A useful signal", payload["iterations"][-1]["scouting_notes"][0]["title"])
+        self.assertEqual(3, len(payload["iterations"][-1]["opportunities"]))
+
     def test_auto_save_changes_the_editable_decision_frame_after_the_pause(self):
         workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
         collaboration = Collaboration()

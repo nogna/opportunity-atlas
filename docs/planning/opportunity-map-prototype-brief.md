@@ -14,8 +14,8 @@ Status: current product model
 
 ## Map and Expedition journeys
 
-1. A team enters its Map, sees North Star context, and captures lightweight Scouting notes. AI helps the team develop a note through an Evidence board, explicitly separating team observations, AI lenses, assumptions, and missing evidence.
-2. The team uses a guided opportunity-hypothesis step to connect the workflow or problem, an AI-enabled change, and a possible outcome. The team—not AI—promotes a sufficiently explored Scouting note into an Island.
+1. A team enters its Map, sees North Star context, and may capture lightweight Scouting notes. A note is only intake: once the team chooses to develop it, the development flow opens directly in an Evidence board rather than displaying the note.
+2. The Evidence board explicitly separates team observations, AI lenses, assumptions, and missing evidence. Contextual guided help within that board helps the team connect the workflow or problem, an AI-enabled change, and a possible outcome. The team—not AI—promotes the prepared work into an Island.
 3. The Map is where Island values are edited and Islands can be archived with a short, required reason. Archived Islands are restorable and available from an optional archive view.
 4. The team enters the Expedition destination, compares existing Island values, selects its focused Islands, states the required goal, optionally adds an intended outcome, and confirms. It may surface the selected Islands' prepared hypotheses and gaps, but does not ask the team to restate them.
 5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on.

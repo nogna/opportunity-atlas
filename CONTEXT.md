@@ -22,11 +22,11 @@ The user-facing, old-atlas representation of one prepared AI opportunity on an O
 
 ## Scouting note
 
-A lightweight, team-authored placeholder for a possible Island. It captures an early observation, idea, or prompt to explore but does not yet claim to be an opportunity on the Map. A Scouting note is developed through an Evidence board and guided hypothesis before the team may promote it to an Island.
+A lightweight, team-authored intake placeholder for a possible Island. It captures an early observation, idea, or prompt to explore but does not yet claim to be an opportunity on the Map. Once a team chooses to develop it, the Scouting note is not part of the Island-development flow: the work opens directly in an Evidence board.
 
 ## Evidence board
 
-The team-visible working area for developing a Scouting note. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct before the team assembles an opportunity hypothesis. AI may help organise or question this material but cannot turn a Scouting note into an Island.
+The team-visible starting point for Island development. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct before the team assembles an opportunity hypothesis. Contextual guided help is available within the board. AI may help organise or question this material but cannot turn a Scouting note into an Island.
 
 ## Archived Island
 

@@ -18,15 +18,15 @@ The Workspace's longer-lived AI vision or strategy. It gives the Map strategic c
 
 ## Island
 
-The user-facing, old-atlas representation of one prepared AI opportunity on an Opportunity Map. An Island is created when the team promotes a Scouting note after working through its evidence and opportunity hypothesis. AI can guide that work, but the team decides whether the note is ready to become an Island. An Island holds its evaluation values.
+The user-facing, old-atlas representation of one AI opportunity on an Opportunity Map. A team may create an Island directly or transfer a Scouting note into one. When a note is transferred, the Island preserves it as provenance. The Island's Evidence board is the team's deep-dive workspace for developing a credible opportunity hypothesis and its evaluation values. AI can guide that work, but the team decides what becomes team-authored Island content.
 
 ## Scouting note
 
-A lightweight, team-authored intake placeholder for a possible Island. It captures an early observation, idea, or prompt to explore but does not yet claim to be an opportunity on the Map. Once a team chooses to develop it, the Scouting note is not part of the Island-development flow: the work opens directly in an Evidence board.
+A lightweight, team-authored intake placeholder for a possible Island. It captures an early observation, idea, or prompt to explore but does not yet claim to be an opportunity on the Map. A team may later transfer it into an Island; the transferred Island preserves the note as visible provenance while its development happens in the Evidence board.
 
 ## Evidence board
 
-The team-visible starting point for Island development. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct before the team assembles an opportunity hypothesis. Contextual guided help is available within the board. AI may help organise or question this material but cannot turn a Scouting note into an Island.
+The team-visible deep-dive workspace for an Island. It keeps observations, supporting or challenging evidence, AI lenses, assumptions, and unanswered questions distinct while the team develops the Island's opportunity hypothesis and adjustable evaluation values. Contextual guided help is available within the board. AI may help organise or question this material but cannot transfer a Scouting note, author team content, or alter evaluation values.
 
 ## Archived Island
 

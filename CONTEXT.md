@@ -26,7 +26,15 @@ An Island the team has removed from the active Map because it no longer belongs.
 
 ## Expedition
 
-A first-class, team-confirmed focused commitment from an Opportunity Map. It selects the Islands the team intends to explore or develop further, has a required short goal, and may include an optional intended outcome. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+A first-class, team-confirmed, evidence-seeking mission from an Opportunity Map. It selects the Islands the team intends to explore or develop further, has a required short goal, and may include an optional intended outcome. It frames a focused hypothesis about how an AI-enabled workflow change could create value, rather than a ranked shortlist or a collection of pilots. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+
+## Workflow hypothesis
+
+The concise link within an Expedition between today's way of working, an AI-enabled change, and the intended outcome. It makes the team test whether changing the workflow—not merely deploying a tool—could create value.
+
+## Value evidence
+
+The practical signal an Expedition will use to learn whether its workflow hypothesis is working. It may be a measurable result or an observable outcome; it is not required to be a formal ROI calculation.
 
 ## Map changes
 
@@ -54,4 +62,4 @@ A temporary claim on one editable Map or Island field. While a Team member edits
 
 ## Legacy terms
 
-**Iteration**, **Decision frame**, **Map focus**, **Shortlist**, **Next Opportunity decision**, and **not-pursuing decision** are superseded product language. Do not introduce them in new user-facing work.
+**Iteration**, **Decision frame**, **Map focus**, **Shortlist**, **Next Opportunity decision**, and **not-pursuing decision** are superseded product language. Do not introduce them in new user-facing work. **Pilot** should not describe an Expedition unless the team deliberately uses it for a specific next action.

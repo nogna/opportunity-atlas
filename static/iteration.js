@@ -346,8 +346,13 @@ async function requestIslandGuidance(action, island, card) {
     const result = await post('/api/workspace/ai-guidance', {action, island: currentIsland});
     const draft = action === 'formulate' ? result.suggestions.join('\n') : result.suggestions.map(item => `• ${item}`).join('\n');
     const target = action === 'formulate' ? 'chart-workflow_problem' : action === 'alternatives' ? 'chart-ai_change' : 'chart-unknowns';
-    guidance.innerHTML = `<p class="eyebrow">${escapeHtml(result.source === 'local' ? 'LOCAL AI SUGGESTION' : 'AI SUGGESTION')}</p><pre class="ai-draft">${escapeHtml(draft)}</pre><button type="button" class="text-button use-ai-draft" data-target="${target}">Use this instead</button><small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
-    $('.use-ai-draft', guidance).addEventListener('click', event => { const targetField = document.querySelector(`[name="${event.currentTarget.dataset.target}"]`); if (targetField) { targetField.value = draft; targetField.dispatchEvent(new Event('input')); } });
+    const bullets = action === 'formulate' ? `<p class="ai-draft">${escapeHtml(draft)}</p><button type="button" class="text-button use-ai-draft" data-target="${target}">Use this instead</button>` : `<p class="ai-drag-hint">Drag a suggestion into this card.</p><ul class="ai-suggestion-list">${result.suggestions.map(item => `<li draggable="true" data-ai-text="${escapeHtml(item)}">${escapeHtml(item)}</li>`).join('')}</ul>`;
+    guidance.innerHTML = `<p class="eyebrow">${escapeHtml(result.source === 'local' ? 'LOCAL AI SUGGESTION' : 'AI SUGGESTION')}</p>${bullets}<small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
+    $('.use-ai-draft', guidance)?.addEventListener('click', event => { const targetField = document.querySelector(`[name="${event.currentTarget.dataset.target}"]`); if (targetField) { targetField.value = draft; targetField.dispatchEvent(new Event('input')); } });
+    const targetField = document.querySelector(`[name="${target}"]`);
+    guidance.querySelectorAll('[draggable="true"]').forEach(item => item.addEventListener('dragstart', event => event.dataTransfer.setData('text/plain', item.dataset.aiText)));
+    targetField?.addEventListener('dragover', event => event.preventDefault(), {once: true});
+    targetField?.addEventListener('drop', event => { event.preventDefault(); const text = event.dataTransfer.getData('text/plain'); targetField.value = `${targetField.value}${targetField.value ? '\n' : ''}${text}`; targetField.dispatchEvent(new Event('input')); }, {once: true});
   } catch (error) {
     guidance.textContent = error.message;
   }

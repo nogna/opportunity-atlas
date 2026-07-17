@@ -1,5 +1,7 @@
 let workspace;
 let mapNameSaveTimer;
+let activeDestination = 'map';
+let expeditionDraft = {};
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character]));
@@ -66,6 +68,13 @@ function scoutingNotesMarkup(notes) {
 
 function render(payload) {
   workspace = payload;
+  document.querySelectorAll('[data-destination]').forEach(button => {
+    button.classList.toggle('is-active', button.dataset.destination === activeDestination);
+  });
+  if (activeDestination === 'expedition') {
+    renderExpedition(payload);
+    return;
+  }
   const map = currentMap(payload);
   $('#map-app').innerHTML = `
     <section class="map-intro">
@@ -94,6 +103,91 @@ function render(payload) {
   document.querySelectorAll('.open-transferred-island').forEach(button => button.addEventListener('click', () => openIsland(button.dataset.islandId)));
   $('#map-name').addEventListener('input', scheduleMapNameSave);
   $('#map-name').addEventListener('blur', saveMapName);
+}
+
+function islandExpeditionContext(island) {
+  const chart = island.chart_room || {};
+  const hypothesis = chart.workflow_problem || island.detail || island.description || island.summary || 'This Island has not yet been described.';
+  const gap = chart.unknowns || 'No unknowns have been recorded yet.';
+  return `<div class="expedition-context"><p class="eyebrow">FROM THE CHART ROOM · READ ONLY</p><p>${escapeHtml(hypothesis)}</p><p><b>Known gap:</b> ${escapeHtml(gap)}</p><div class="expedition-values">${evaluationSummary(island)}</div></div>`;
+}
+
+function charterMarkup(island) {
+  const charter = expeditionDraft[island.id] || {};
+  return `<article class="island-flag">
+    <header><p class="eyebrow">ISLAND CHARTER</p><h3>${escapeHtml(island.title)}</h3></header>
+    ${islandExpeditionContext(island)}
+    <label class="charter-field charter-action">Next learning action <span>required</span>
+      <textarea data-charter-field="next_learning_action" data-island-id="${escapeHtml(island.id)}" maxlength="2000" placeholder="The smallest useful learning move…">${escapeHtml(charter.next_learning_action || '')}</textarea>
+    </label>
+    <details class="charter-details"><summary>Optional Charter details</summary>
+      <label class="charter-field">Participants<input data-charter-field="participants" data-island-id="${escapeHtml(island.id)}" maxlength="500" value="${escapeHtml(charter.participants || '')}" placeholder="Who needs to take part?"></label>
+      <label class="charter-field">Intended outcome<textarea data-charter-field="intended_outcome" data-island-id="${escapeHtml(island.id)}" maxlength="2000" placeholder="A useful result for this Island in this Expedition…">${escapeHtml(charter.intended_outcome || '')}</textarea></label>
+      <label class="charter-field">Decision evidence<textarea data-charter-field="decision_evidence" data-island-id="${escapeHtml(island.id)}" maxlength="2000" placeholder="What would help the team continue, adjust, or stop?">${escapeHtml(charter.decision_evidence || '')}</textarea></label>
+    </details>
+  </article>`;
+}
+
+function activeExpeditionMarkup(expedition, islands) {
+  const islandById = new Map(islands.map(island => [island.id, island]));
+  return `<section class="expedition-active"><p class="eyebrow">ACTIVE EXPEDITION · MAP SNAPSHOT CAPTURED</p><h1>Island flags are flying.</h1><p class="expedition-intro">The living Map can continue to evolve. This Expedition keeps the Charters the team confirmed together.</p>
+    <section class="active-charters">${expedition.charters.map(charter => {
+      const island = islandById.get(charter.island_id) || expedition.map_snapshot.islands.find(item => item.id === charter.island_id) || {title: 'Archived Island'};
+      return `<article class="active-charter"><p class="eyebrow">${escapeHtml(island.title)}</p><h3>${escapeHtml(charter.next_learning_action)}</h3>${charter.participants ? `<p><b>With:</b> ${escapeHtml(charter.participants)}</p>` : ''}${charter.intended_outcome ? `<p><b>For:</b> ${escapeHtml(charter.intended_outcome)}</p>` : ''}${charter.decision_evidence ? `<p><b>Evidence:</b> ${escapeHtml(charter.decision_evidence)}</p>` : ''}</article>`;
+    }).join('')}</section>
+    <aside class="snapshot-note"><b>Map snapshot saved</b><span>${escapeHtml(expedition.map_snapshot.name)} as confirmed. The comparison with today’s Map is intentionally a later step.</span></aside>
+    <button class="secondary" id="start-new-expedition">Start another Expedition</button>
+  </section>`;
+}
+
+function renderExpedition(payload) {
+  const map = currentMap(payload);
+  const active = payload.expedition;
+  if (active && !expeditionDraft.__new) {
+    $('#map-app').innerHTML = activeExpeditionMarkup(active, map.islands);
+    $('#start-new-expedition').addEventListener('click', () => { expeditionDraft = {__new: true}; render(workspace); });
+    return;
+  }
+  const selectedIds = Object.keys(expeditionDraft).filter(id => id !== '__new');
+  const selected = map.islands.filter(island => selectedIds.includes(island.id));
+  const allActionsNamed = selected.length && selected.every(island => expeditionDraft[island.id].next_learning_action?.trim());
+  $('#map-app').innerHTML = `<section class="expedition-page">
+    <header class="expedition-heading"><p class="eyebrow">EXPEDITION · ISLAND FLAGS</p><h1>Give each Island its first leg.</h1><p>Choose prepared Islands from the living Map. Their Chart Room context and values stay inherited; an Island Charter only records what this Expedition will do next.</p></header>
+    <section class="expedition-selector"><div><p class="eyebrow">ISLANDS ABOARD</p><h2>Choose the focus set</h2></div><div class="island-picks">${map.islands.map(island => `<label class="island-pick ${selectedIds.includes(island.id) ? 'island-pick--selected' : ''}"><input type="checkbox" data-select-island="${escapeHtml(island.id)}" ${selectedIds.includes(island.id) ? 'checked' : ''}><span><b>${escapeHtml(island.title)}</b><small>${escapeHtml(island.summary || island.description || 'Prepared Island')}</small></span></label>`).join('')}</div></section>
+    <section class="charter-flags">${selected.length ? selected.map(charterMarkup).join('') : '<p class="expedition-empty">Select one or more Islands to give them an Expedition-specific Charter. Their durable opportunity work remains in the Chart Room.</p>'}</section>
+    <footer class="expedition-summary"><div><p class="eyebrow">EXPEDITION ASSEMBLED FROM CHARTERS</p><h2>${selected.length ? `${selected.length} Island${selected.length === 1 ? '' : 's'} aboard` : 'No Islands aboard yet'}</h2><p id="charter-progress">${selected.length ? `${selected.filter(island => expeditionDraft[island.id].next_learning_action?.trim()).length}/${selected.length} next learning actions named.` : 'No generic Expedition mission is required.'}</p></div><button class="primary" id="confirm-expedition" ${allActionsNamed ? '' : 'disabled'}>Confirm Map snapshot</button></footer>
+    <p class="form-error" id="expedition-error" role="alert"></p>
+  </section>`;
+  document.querySelectorAll('[data-select-island]').forEach(input => input.addEventListener('change', () => {
+    if (input.checked) expeditionDraft[input.dataset.selectIsland] = expeditionDraft[input.dataset.selectIsland] || {};
+    else delete expeditionDraft[input.dataset.selectIsland];
+    render(workspace);
+  }));
+  document.querySelectorAll('[data-charter-field]').forEach(field => field.addEventListener('input', () => {
+    expeditionDraft[field.dataset.islandId][field.dataset.charterField] = field.value;
+    updateExpeditionControls();
+  }));
+  $('#confirm-expedition').addEventListener('click', confirmExpedition);
+}
+
+function updateExpeditionControls() {
+  const selected = Object.entries(expeditionDraft).filter(([id]) => id !== '__new');
+  const actions = selected.filter(([, charter]) => charter.next_learning_action?.trim()).length;
+  $('#charter-progress').textContent = `${actions}/${selected.length} next learning actions named.`;
+  $('#confirm-expedition').disabled = !selected.length || actions !== selected.length;
+}
+
+async function confirmExpedition() {
+  const charters = Object.entries(expeditionDraft).filter(([id]) => id !== '__new').map(([island_id, charter]) => ({island_id, ...charter}));
+  try {
+    $('#confirm-expedition').disabled = true;
+    await post('/api/workspace/expeditions', {charters});
+    expeditionDraft = {};
+    await loadWorkspace();
+  } catch (error) {
+    $('#expedition-error').textContent = error.message;
+    $('#confirm-expedition').disabled = false;
+  }
 }
 
 function rememberedScoutName() {
@@ -309,5 +403,11 @@ async function loadWorkspace() {
     $('#map-app').innerHTML = `<p class="load-error">${escapeHtml(error.message)}</p>`;
   }
 }
+
+document.querySelectorAll('[data-destination]').forEach(button => button.addEventListener('click', () => {
+  activeDestination = button.dataset.destination;
+  expeditionDraft = {};
+  if (workspace) render(workspace);
+}));
 
 loadWorkspace();

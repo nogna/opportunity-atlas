@@ -133,6 +133,7 @@ def workspace_payload(workspace: Workspace) -> dict:
         "north_star": current.north_star,
         "is_editable": current.is_editable,
     }
+    payload["expedition"] = workspace.current_expedition
     return payload
 
 
@@ -283,6 +284,16 @@ class AppHandler(SimpleHTTPRequestHandler):
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.CREATED, {"opportunity": island})
+            if self.path == "/api/workspace/expeditions":
+                workspace = load_workspace()
+                expedition = workspace.confirm_expedition(
+                    charters=payload.get("charters")
+                )
+                save_workspace(workspace)
+                return self.send_json(
+                    HTTPStatus.CREATED,
+                    {"expedition": expedition, **workspace_payload(workspace)},
+                )
             if self.path.startswith("/api/workspace/opportunities/"):
                 opportunity_id = unquote(self.path.rsplit("/", 1)[-1])
                 workspace = load_workspace()

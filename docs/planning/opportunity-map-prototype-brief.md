@@ -18,7 +18,7 @@ Status: current product model
 2. The Chart Room explicitly separates team observations, AI lenses, assumptions, and missing evidence. Contextual guided help within it helps the team connect the workflow or problem, an AI-enabled change, and a possible outcome. It also holds the Island's adjustable evaluation values. AI does not transfer notes, author team content, or change values.
 3. The Map is where Island values are edited and Islands can be archived with a short, required reason. Archived Islands are restorable and available from an optional archive view.
 4. The team enters the Expedition destination, compares existing Island values, selects its focused Islands, and creates or reviews a compact Island Charter for each one. It may surface the selected Islands' prepared hypotheses and gaps, but does not ask the team to restate them. The Expedition presents a summary of those Charters rather than requiring a generic mission.
-5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on.
+5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on, including previous and current evaluation numbers for a changed Island.
 
 ## Explicitly retired
 

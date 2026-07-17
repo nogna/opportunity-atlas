@@ -50,7 +50,7 @@ The practical signal attached to an Island that can help the team learn whether 
 
 ## Map changes
 
-A read-only comparison between an Expedition's Map snapshot and the current living Map. It makes added, changed, or archived Islands visible without requiring the team to write a change note or manage manual Map versions.
+A read-only comparison between an Expedition's Map snapshot and the current living Map. It makes added, changed, or archived Islands visible without requiring the team to write a change note or manage manual Map versions. For a changed Island, it makes changed evaluation values legible as previous and current numbers, alongside any relevant content change.
 
 ## AI suggestion
 

@@ -324,6 +324,7 @@ function openIsland(islandId) {
   dialog.showModal();
   $('#close-dialog').addEventListener('click', () => dialog.close());
   document.querySelectorAll('.ai-lens').forEach(button => button.addEventListener('click', () => showAiLens(button.dataset.lens)));
+  document.querySelectorAll('[data-ai-action]').forEach(button => button.addEventListener('click', () => requestIslandGuidance(button.dataset.aiAction, island)));
   $('#toggle-ai-sidecar').addEventListener('click', toggleAiSidecar);
   document.querySelectorAll('[name^="chart-"]').forEach(field => field.addEventListener('input', updateAiProgress));
   updateAiProgress();
@@ -337,7 +338,20 @@ function scoutingNoteProvenance(island) {
 }
 
 function aiSidecarMarkup() {
-  return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>Guidance while you chart</h3><p>Suggestions are questions, never team content. You choose what to write, save, or ignore.</p></header><ol class="ai-progress" id="ai-progress"><li data-step="workflow_problem">Frame the workflow</li><li data-step="evidence">Separate evidence from assumptions</li><li data-step="outcome">Name a possible outcome</li><li data-step="learning_action">Choose a next learning action</li></ol><div class="ai-guidance"><p class="eyebrow">CURRENT LENS</p><p id="ai-guidance">Start with the work as it is today. What decision is delayed, and who is affected?</p></div><div class="ai-lenses"><button type="button" class="secondary ai-lens" data-lens="workflow">Workflow lens</button><button type="button" class="secondary ai-lens" data-lens="evidence">Evidence lens</button><button type="button" class="secondary ai-lens" data-lens="values">Value lens</button></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
+  return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>Shape, explore, or challenge</h3><p>AI advice is separate from team content. It uses the visible Island and North Star; you choose what to write, save, or ignore.</p></header><div class="ai-actions"><button type="button" class="secondary" data-ai-action="formulate">Help formulate</button><button type="button" class="secondary" data-ai-action="alternatives">Explore alternatives</button><button type="button" class="secondary" data-ai-action="challenge">Challenge this Island</button></div><ol class="ai-progress" id="ai-progress"><li data-step="workflow_problem">Frame the workflow</li><li data-step="evidence">Separate evidence from assumptions</li><li data-step="outcome">Name a possible outcome</li><li data-step="learning_action">Choose a next learning action</li></ol><div class="ai-guidance"><p class="eyebrow">CURRENT LENS</p><p id="ai-guidance">Start with the work as it is today. What decision is delayed, and who is affected?</p></div><div class="ai-lenses"><button type="button" class="secondary ai-lens" data-lens="workflow">Workflow lens</button><button type="button" class="secondary ai-lens" data-lens="evidence">Evidence lens</button><button type="button" class="secondary ai-lens" data-lens="values">Value lens</button></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
+}
+
+async function requestIslandGuidance(action, island) {
+  const form = $('#edit-island-form');
+  const currentIsland = {...island, title: form.elements.title.value.trim(), chart_room: chartRoomFrom(form)};
+  const guidance = $('#ai-guidance');
+  guidance.textContent = 'Preparing transparent guidance…';
+  try {
+    const result = await post('/api/workspace/ai-guidance', {action, island: currentIsland});
+    guidance.innerHTML = `<b>${escapeHtml(result.source === 'local' ? 'Local demo guide' : 'AI guide')}</b><br>${result.suggestions.map(item => `• ${escapeHtml(item)}`).join('<br>')}<br><br><small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
+  } catch (error) {
+    guidance.textContent = error.message;
+  }
 }
 
 function chartRoomWithStartingPoint(island) {

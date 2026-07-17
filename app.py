@@ -178,6 +178,45 @@ def local_assist(use_case):
     return {"source": "local", "rewrite": f"{title}: help {use_case.get('user') or 'the target user'} improve {use_case.get('workflow') or 'this workflow'} with an AI-assisted step that remains reviewable by a human.", "gaps": prompt}
 
 
+def local_island_guidance(action, island, north_star):
+    """Offer visible, non-persisting guidance from supplied Island context."""
+    if action not in {"formulate", "alternatives", "challenge", "expedition"}:
+        raise ValueError("Unknown AI guidance mode.")
+    chart = island.get("chart_room") or {}
+    title = island.get("title") or "This Island"
+    workflow = chart.get("workflow_problem") or "No workflow has been recorded yet."
+    evidence = chart.get("evidence") or "No team evidence has been recorded yet."
+    suggestions = {
+        "formulate": [
+            f"Describe the decision or handoff in {workflow}",
+            "Name the human review point before describing the AI contribution.",
+            "Turn the possible outcome into something the team could observe or measure.",
+        ],
+        "alternatives": [
+            "Consider AI that surfaces patterns for human review, rather than acting on them.",
+            "Consider a retrieval-backed brief with cited sources, rather than a free-form recommendation.",
+            "Consider starting with a small export or manual review loop before integrating systems.",
+        ],
+        "challenge": [
+            f"What evidence beyond “{evidence}” would make the claimed value credible?",
+            "What would make this AI-enabled change worse than the current workflow?",
+            "Who can override the output, and how would they notice a harmful or weak result?",
+        ],
+        "expedition": [
+            "Choose the smallest next learning action that could strengthen or weaken this Island.",
+            "Name the evidence that would let the team decide whether to continue, adapt, or stop.",
+            "Check that the action advances the North Star rather than only producing activity.",
+        ],
+    }[action]
+    return {
+        "source": "local",
+        "mode": action,
+        "team_context": f"North Star: {north_star or 'Not yet recorded.'} Island: {title}. Current workflow: {workflow}",
+        "assumptions": ["This advice is based only on the visible Map and Chart Room context.", "The team, not AI, decides whether any suggestion is true or useful."],
+        "suggestions": suggestions,
+    }
+
+
 def openai_assist(use_case, workspace):
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -318,6 +357,17 @@ class AppHandler(SimpleHTTPRequestHandler):
                 apply_suggested_weights(workspace.current_iteration, payload["weights"])
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/ai-guidance":
+                workspace = load_workspace()
+                island = payload.get("island")
+                if not isinstance(island, dict):
+                    raise ValueError("AI guidance needs an Island context.")
+                return self.send_json(
+                    HTTPStatus.OK,
+                    local_island_guidance(
+                        payload.get("action"), island, workspace.current_iteration.north_star
+                    ),
+                )
             if self.path == "/api/workspace/archive":
                 workspace = load_workspace()
                 archive = workspace.archive_inherited_opportunity(

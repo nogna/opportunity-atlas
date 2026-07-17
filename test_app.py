@@ -102,6 +102,19 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(["new-island"], [item["island"]["id"] for item in payload["map_changes"]["added"]])
         self.assertTrue(payload["map_changes"]["has_changes"])
 
+    def test_island_ai_guidance_labels_team_context_assumptions_and_suggestions(self):
+        guidance = app.local_island_guidance(
+            action="challenge",
+            island={"title": "Ticket triage", "chart_room": {"workflow_problem": "Leads scan tickets."}},
+            north_star="Keep customer decisions accountable.",
+        )
+
+        self.assertEqual("local", guidance["source"])
+        self.assertEqual("challenge", guidance["mode"])
+        self.assertIn("Keep customer decisions accountable.", guidance["team_context"])
+        self.assertTrue(guidance["assumptions"])
+        self.assertTrue(guidance["suggestions"])
+
     def test_auto_save_changes_the_editable_decision_frame_after_the_pause(self):
         workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
         collaboration = Collaboration()

@@ -66,11 +66,21 @@ function scoutingNotesMarkup(notes) {
   }).join('');
 }
 
+function islandSummary(island, fallback) {
+  const chart = island.chart_room || {};
+  return chart.workflow_problem || island.detail || island.description || island.summary || fallback;
+}
+
 function render(payload) {
   workspace = payload;
   document.querySelectorAll('[data-destination]').forEach(button => {
     button.classList.toggle('is-active', button.dataset.destination === activeDestination);
   });
+  if (activeDestination === 'map-changes') {
+    $('#map-app').innerHTML = mapChangesMarkup(payload);
+    $('#back-to-expedition').addEventListener('click', () => { activeDestination = 'expedition'; render(workspace); });
+    return;
+  }
   if (activeDestination === 'expedition') {
     renderExpedition(payload);
     return;
@@ -107,7 +117,7 @@ function render(payload) {
 
 function islandExpeditionContext(island) {
   const chart = island.chart_room || {};
-  const hypothesis = chart.workflow_problem || island.detail || island.description || island.summary || 'This Island has not yet been described.';
+  const hypothesis = islandSummary(island, 'This Island has not yet been described.');
   const gap = chart.unknowns || 'No unknowns have been recorded yet.';
   return `<div class="expedition-context"><p class="eyebrow">FROM THE CHART ROOM · READ ONLY</p><p>${escapeHtml(hypothesis)}</p><p><b>Known gap:</b> ${escapeHtml(gap)}</p><div class="expedition-values">${evaluationSummary(island)}</div></div>`;
 }
@@ -128,14 +138,70 @@ function charterMarkup(island) {
   </article>`;
 }
 
-function activeExpeditionMarkup(expedition, islands) {
+function mapChangeCount(comparison) {
+  if (!comparison?.has_changes) return 'The Map still matches this Expedition’s snapshot.';
+  const parts = [
+    comparison.added.length && `${comparison.added.length} added`,
+    comparison.added_scouting_notes.length && `${comparison.added_scouting_notes.length} new note${comparison.added_scouting_notes.length === 1 ? '' : 's'}`,
+    comparison.changed.length && `${comparison.changed.length} changed`,
+    comparison.archived.length && `${comparison.archived.length} archived`,
+  ].filter(Boolean);
+  return `The Map has moved on: ${parts.join(', ')}.`;
+}
+
+function scoutingNoteChangeGroup(notes) {
+  if (!notes.length) return '';
+  return `<section class="map-change-group map-change-group--notes"><header><p class="eyebrow">SCOUTED SINCE CONFIRMATION</p><h2>${notes.length} personal note${notes.length === 1 ? '' : 's'}</h2></header><div class="map-change-list">${notes.map(note => `<article class="map-change-card"><p class="eyebrow">NOT YET AN ISLAND</p><h3>${escapeHtml(note.title)}</h3><p>${escapeHtml(note.body)}</p><p class="scouting-note-author">Added by ${escapeHtml(note.author)}</p></article>`).join('')}</div></section>`;
+}
+
+function strongerIslandNotices(notices, islands) {
+  if (!notices.length) return '';
+  const islandById = new Map(islands.map(island => [island.id, island]));
+  return `<section class="map-value-notices" aria-label="Current Map value notices"><p class="eyebrow">CURRENT MAP VALUE NOTICE</p>${notices.map(notice => {
+    const island = islandById.get(notice.island_id);
+    const selected = islandById.get(notice.selected_island_id);
+    return `<p><b>${escapeHtml(island?.title || 'An unselected Island')}</b> is now stronger on the current Map values (${notice.island_score.toFixed(1)}) than <b>${escapeHtml(selected?.title || 'a selected Island')}</b> (${notice.selected_island_score.toFixed(1)}). The Expedition is unchanged.</p>`;
+  }).join('')}</section>`;
+}
+
+function mapChangeIslandSummary(island) {
+  return islandSummary(island, 'No description recorded.');
+}
+
+function mapValueDeltas(valueChanges) {
+  if (!valueChanges.length) return '<p class="map-value-deltas-empty">Evaluation values are unchanged.</p>';
+  const labels = new Map(DIMENSIONS.map(([id, label]) => [id, label]));
+  return `<section class="map-value-deltas" aria-label="Changed Island values"><p class="eyebrow">ISLAND VALUES</p><dl>${valueChanges.map(change => `<div><dt>${escapeHtml(labels.get(change.id) || change.id)}</dt><dd><span>Then ${change.before ?? 'not assessed'} / 5</span><b>→</b><span>Now ${change.after ?? 'not assessed'} / 5</span></dd></div>`).join('')}</dl></section>`;
+}
+
+function mapChangeGroup(label, changes, type) {
+  if (!changes.length) return '';
+  return `<section class="map-change-group map-change-group--${type}"><header><p class="eyebrow">${label}</p><h2>${changes.length} Island${changes.length === 1 ? '' : 's'}</h2></header><div class="map-change-list">${changes.map(change => {
+    if (type === 'changed') {
+      return `<article class="map-change-card"><p class="eyebrow">CHANGED ON THE LIVING MAP</p><h3>${escapeHtml(change.after.title)}</h3><p>${escapeHtml(mapChangeIslandSummary(change.after))}</p>${mapValueDeltas(change.value_changes || [])}<details><summary>See snapshot detail</summary><p><b>When confirmed:</b> ${escapeHtml(change.before.title)} — ${escapeHtml(mapChangeIslandSummary(change.before))}</p></details></article>`;
+    }
+    const island = change.island;
+    const verb = type === 'added' ? 'CHARTED AFTER THIS EXPEDITION' : 'NO LONGER ON THE ACTIVE MAP';
+    return `<article class="map-change-card"><p class="eyebrow">${verb}</p><h3>${escapeHtml(island.title)}</h3><p>${escapeHtml(mapChangeIslandSummary(island))}</p>${type === 'archived' ? `<p class="archive-reason"><b>Archived because:</b> ${escapeHtml(change.reason)}</p>` : ''}</article>`;
+  }).join('')}</div></section>`;
+}
+
+function mapChangesMarkup(payload) {
+  const expedition = payload.expedition;
+  const comparison = payload.map_changes;
+  const map = currentMap(payload);
+  if (!expedition || !comparison) return '<p class="load-error">There is no confirmed Expedition to compare yet.</p>';
+  return `<section class="map-changes-page"><button class="text-button" id="back-to-expedition">← Back to Expedition</button><header class="map-changes-heading"><p class="eyebrow">MAP CHANGES · READ ONLY</p><h1>The Map keeps moving.</h1><p>This is a calm comparison with the Map snapshot saved when this Expedition was confirmed. It does not freeze the Map or ask the team for a change note.</p></header><aside class="map-changes-note"><b>${escapeHtml(expedition.map_snapshot.name)} then · living Map now</b><span>${escapeHtml(mapChangeCount(comparison))}</span></aside>${strongerIslandNotices(comparison.newly_stronger_unselected, map.islands)}${comparison.has_changes ? `<div class="map-change-groups">${mapChangeGroup('ADDED ISLANDS SINCE CONFIRMATION', comparison.added, 'added')}${scoutingNoteChangeGroup(comparison.added_scouting_notes)}${mapChangeGroup('CHANGED SINCE CONFIRMATION', comparison.changed, 'changed')}${mapChangeGroup('ARCHIVED SINCE CONFIRMATION', comparison.archived, 'archived')}</div>` : '<section class="map-changes-empty"><h2>No Map changes yet</h2><p>The Map remains editable whenever the team discovers something new.</p></section>'}</section>`;
+}
+
+function activeExpeditionMarkup(expedition, islands, comparison) {
   const islandById = new Map(islands.map(island => [island.id, island]));
   return `<section class="expedition-active"><p class="eyebrow">ACTIVE EXPEDITION · MAP SNAPSHOT CAPTURED</p><h1>Island flags are flying.</h1><p class="expedition-intro">The living Map can continue to evolve. This Expedition keeps the Charters the team confirmed together.</p>
     <section class="active-charters">${expedition.charters.map(charter => {
       const island = islandById.get(charter.island_id) || expedition.map_snapshot.islands.find(item => item.id === charter.island_id) || {title: 'Archived Island'};
       return `<article class="active-charter"><p class="eyebrow">${escapeHtml(island.title)}</p><h3>${escapeHtml(charter.next_learning_action)}</h3>${charter.participants ? `<p><b>With:</b> ${escapeHtml(charter.participants)}</p>` : ''}${charter.intended_outcome ? `<p><b>For:</b> ${escapeHtml(charter.intended_outcome)}</p>` : ''}${charter.decision_evidence ? `<p><b>Evidence:</b> ${escapeHtml(charter.decision_evidence)}</p>` : ''}</article>`;
     }).join('')}</section>
-    <aside class="snapshot-note"><b>Map snapshot saved</b><span>${escapeHtml(expedition.map_snapshot.name)} as confirmed. The comparison with today’s Map is intentionally a later step.</span></aside>
+    <aside class="snapshot-note"><div><b>Map snapshot saved</b><span>${escapeHtml(expedition.map_snapshot.name)} as confirmed. ${escapeHtml(mapChangeCount(comparison))}</span></div><button class="secondary" id="show-map-changes">Compare Map changes</button></aside>
     <button class="secondary" id="start-new-expedition">Start another Expedition</button>
   </section>`;
 }
@@ -144,8 +210,9 @@ function renderExpedition(payload) {
   const map = currentMap(payload);
   const active = payload.expedition;
   if (active && !expeditionDraft.__new) {
-    $('#map-app').innerHTML = activeExpeditionMarkup(active, map.islands);
+    $('#map-app').innerHTML = activeExpeditionMarkup(active, map.islands, payload.map_changes);
     $('#start-new-expedition').addEventListener('click', () => { expeditionDraft = {__new: true}; render(workspace); });
+    $('#show-map-changes').addEventListener('click', () => { activeDestination = 'map-changes'; render(workspace); });
     return;
   }
   const selectedIds = Object.keys(expeditionDraft).filter(id => id !== '__new');

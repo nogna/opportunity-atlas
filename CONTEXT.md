@@ -18,7 +18,7 @@ The Workspace's longer-lived AI vision or strategy. It gives the Map strategic c
 
 ## Island
 
-The user-facing, old-atlas representation of one AI opportunity on an Opportunity Map. A team may create an Island directly or transfer a Scouting note into one. When a note is transferred, the Island preserves it as provenance. The Island's Evidence board is the team's deep-dive workspace for developing a credible opportunity hypothesis and its evaluation values. AI can guide that work, but the team decides what becomes team-authored Island content.
+The user-facing, old-atlas representation of one AI opportunity on an Opportunity Map. A team may create an Island directly or transfer a Scouting note into one. When a note is transferred, the Island preserves it as provenance. The Island's Chart Room is the team's deep-dive workspace for developing a credible opportunity hypothesis and its evaluation values. AI can guide that work, but the team decides what becomes team-authored Island content.
 
 ## Scouting note
 
@@ -50,7 +50,7 @@ The practical signal attached to an Island that can help the team learn whether 
 
 ## Map changes
 
-A read-only comparison between an Expedition's Map snapshot and the current living Map. It makes added, changed, or archived Islands visible without requiring the team to write a change note or manage manual Map versions.
+A read-only comparison between an Expedition's Map snapshot and the current living Map. It distinguishes newly added personal Scouting notes from newly charted Islands, makes changed Island evaluation values legible as previous and current numbers, and makes archived Islands visible without requiring a change note or manual Map versions. When current Map values newly make an unselected Island stronger than a selected Expedition Island, it shows a calm notice; the notice does not re-rank, alter, or replace the Expedition.
 
 ## AI suggestion
 

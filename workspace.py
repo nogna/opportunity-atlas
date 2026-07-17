@@ -57,6 +57,9 @@ class Iteration:
     # Lightweight, individually authored inputs stay separate from the Map
     # until somebody explicitly transfers one into an Island.
     scouting_notes: list[dict] = field(default_factory=list)
+    # Archived Islands are retained separately from the living Map so their
+    # reasoned removal can be compared to an Expedition snapshot and reversed.
+    archived_islands: list[dict] = field(default_factory=list)
     # Expeditions preserve a time-specific commitment without freezing the Map.
     # The active Expedition is the most recent confirmed one; earlier ones are
     # retained as past records rather than being rewritten when the Map moves.
@@ -356,6 +359,49 @@ class Workspace:
         current.opportunities.append(deepcopy(opportunity))
         return current.opportunities[-1]
 
+    def archive_island(self, *, opportunity_id: str, reason: str) -> dict:
+        """Remove an Island from the active Map while retaining its provenance.
+
+        This is deliberately a small domain seam for comparison and future Map
+        controls. The #29 view itself remains read-only.
+        """
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("Archiving an Island requires a reason.")
+        current = self.current_iteration
+        island = next(
+            (candidate for candidate in current.opportunities if candidate["id"] == opportunity_id),
+            None,
+        )
+        if island is None:
+            raise ValueError("The Island does not belong to this Map.")
+        current.opportunities = [
+            candidate for candidate in current.opportunities if candidate["id"] != opportunity_id
+        ]
+        archive = {
+            "island": deepcopy(island),
+            "reason": reason.strip(),
+            "archived_at": self._timestamp(),
+        }
+        current.archived_islands.append(archive)
+        return archive
+
+    def restore_archived_island(self, opportunity_id: str) -> dict:
+        """Return a reasoned archived Island to the active living Map."""
+        current = self.current_iteration
+        index = next(
+            (
+                position
+                for position, archive in enumerate(current.archived_islands)
+                if archive["island"]["id"] == opportunity_id
+            ),
+            None,
+        )
+        if index is None:
+            raise ValueError("The Island is not archived on this Map.")
+        archive = current.archived_islands.pop(index)
+        current.opportunities.append(deepcopy(archive["island"]))
+        return current.opportunities[-1]
+
     @property
     def current_expedition(self) -> dict | None:
         """Return the Map's one active Expedition, if a team has confirmed one."""
@@ -412,6 +458,7 @@ class Workspace:
             "name": current.name,
             "north_star": current.north_star,
             "islands": deepcopy(current.opportunities),
+            "scouting_notes": deepcopy(current.scouting_notes),
         }
         expedition = {
             "id": f"expedition-{uuid4().hex}",
@@ -423,6 +470,160 @@ class Workspace:
         }
         current.expeditions.append(expedition)
         return expedition
+
+    def map_changes_for_expedition(self, expedition_id: str) -> dict:
+        """Compare a confirmed Expedition's immutable Map snapshot to today.
+
+        The comparison is deliberately a derived, read-only view.  The Map is
+        still the team's living source of truth, so it needs neither manually
+        named versions nor a mandatory explanation every time it evolves.
+        """
+        expedition = next(
+            (
+                candidate
+                for candidate in self.current_iteration.expeditions
+                if candidate["id"] == expedition_id
+            ),
+            None,
+        )
+        if expedition is None:
+            raise ValueError("The Expedition does not belong to this Map.")
+
+        snapshot_by_id = {
+            island["id"]: island for island in expedition["map_snapshot"]["islands"]
+        }
+        snapshot_notes = expedition["map_snapshot"].get("scouting_notes")
+        snapshot_notes_by_id = {note["id"] for note in snapshot_notes or []}
+        current_by_id = {
+            island["id"]: island for island in self.current_iteration.opportunities
+        }
+
+        added = [
+            {"island": deepcopy(island)}
+            for island in self.current_iteration.opportunities
+            if island["id"] not in snapshot_by_id
+        ]
+        added_scouting_notes = [
+            deepcopy(note)
+            for note in self.current_iteration.scouting_notes
+            if (
+                note["id"] not in snapshot_notes_by_id
+                and (
+                    snapshot_notes is not None
+                    or note.get("created_at", "") > expedition["confirmed_at"]
+                )
+            )
+            and not note.get("transferred_to_island_id")
+        ]
+        changed = []
+        for island in expedition["map_snapshot"]["islands"]:
+            current_island = current_by_id.get(island["id"])
+            if current_island is None or current_island == island:
+                continue
+            before_values = island.get("evaluation", {})
+            after_values = current_island.get("evaluation", {})
+            value_changes = [
+                {
+                    "id": value_id,
+                    "before": before_values.get(value_id, {}).get("score"),
+                    "after": after_values.get(value_id, {}).get("score"),
+                }
+                for value_id in sorted(set(before_values) | set(after_values))
+                if before_values.get(value_id, {}).get("score")
+                != after_values.get(value_id, {}).get("score")
+            ]
+            changed.append(
+                {
+                    "before": deepcopy(island),
+                    "after": deepcopy(current_island),
+                    "value_changes": value_changes,
+                }
+            )
+        archived_by_id = {
+            archive["island"]["id"]: archive
+            for archive in self.current_iteration.archived_islands
+        }
+        archived = [
+            {
+                "island": deepcopy(archived_by_id[island["id"]]["island"]),
+                "reason": archived_by_id[island["id"]]["reason"],
+            }
+            for island in expedition["map_snapshot"]["islands"]
+            if island["id"] in archived_by_id
+        ]
+        newly_stronger_unselected = self._newly_stronger_unselected_islands(
+            expedition=expedition,
+            snapshot_by_id=snapshot_by_id,
+            current_by_id=current_by_id,
+        )
+        return {
+            "added": added,
+            "added_scouting_notes": added_scouting_notes,
+            "changed": changed,
+            "archived": archived,
+            "newly_stronger_unselected": newly_stronger_unselected,
+            "has_changes": bool(added or added_scouting_notes or changed or archived),
+        }
+
+    @staticmethod
+    def _map_value_signal(island: dict) -> float | None:
+        """Derive a comparable current Map signal without storing a rank.
+
+        This is intentionally a read-only comparison aid, not an Expedition
+        ranking model. It uses only the visible Island values and normalises
+        lower effort so a higher signal remains more favourable.
+        """
+        evaluation = island.get("evaluation", {})
+        scores = []
+        for dimension in ISLAND_EVALUATION_DIMENSION_IDS:
+            value = evaluation.get(dimension, {}).get("score")
+            if not isinstance(value, int):
+                continue
+            scores.append(6 - value if dimension == "effort" else value)
+        return sum(scores) / len(scores) if scores else None
+
+    def _newly_stronger_unselected_islands(
+        self,
+        *,
+        expedition: dict,
+        snapshot_by_id: dict[str, dict],
+        current_by_id: dict[str, dict],
+    ) -> list[dict]:
+        """Find new crossovers, not pre-existing selection trade-offs."""
+        selected_ids = set(expedition["selected_island_ids"])
+        selected_current = [
+            current_by_id[island_id]
+            for island_id in selected_ids
+            if island_id in current_by_id
+        ]
+        notices = []
+        for island_id, island in current_by_id.items():
+            if island_id in selected_ids:
+                continue
+            island_score = self._map_value_signal(island)
+            if island_score is None:
+                continue
+            prior_island_score = self._map_value_signal(snapshot_by_id.get(island_id, {}))
+            for selected in selected_current:
+                selected_score = self._map_value_signal(selected)
+                if selected_score is None or island_score <= selected_score:
+                    continue
+                prior_selected_score = self._map_value_signal(snapshot_by_id.get(selected["id"], {}))
+                was_previously_stronger = (
+                    prior_island_score is not None
+                    and prior_selected_score is not None
+                    and prior_island_score > prior_selected_score
+                )
+                if not was_previously_stronger:
+                    notices.append(
+                        {
+                            "island_id": island_id,
+                            "selected_island_id": selected["id"],
+                            "island_score": island_score,
+                            "selected_island_score": selected_score,
+                        }
+                    )
+        return notices
 
     def add_scouting_note(self, *, title: str, body: str, author: str) -> dict:
         """Capture an individual's early thought without adding an Island.
@@ -556,6 +757,7 @@ class Workspace:
         for item in payload["iterations"]:
             serialized = deepcopy(item)
             serialized.setdefault("scouting_notes", [])
+            serialized.setdefault("archived_islands", [])
             serialized.setdefault("expeditions", [])
             # Old persisted Workspaces stored focus only in the Decision Frame.
             serialized.setdefault("map_focus", serialized.get("decision_frame", {}).get("goal"))

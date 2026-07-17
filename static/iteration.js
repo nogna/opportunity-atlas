@@ -320,14 +320,10 @@ function openIsland(islandId) {
   if (!island) return;
   const chartRoom = chartRoomWithStartingPoint(island);
   const dialog = $('#island-dialog');
-  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header>${scoutingNoteProvenance(island)}<div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
+  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header>${scoutingNoteProvenance(island)}<main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section></main><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
   dialog.showModal();
   $('#close-dialog').addEventListener('click', () => dialog.close());
-  document.querySelectorAll('.ai-lens').forEach(button => button.addEventListener('click', () => showAiLens(button.dataset.lens)));
-  document.querySelectorAll('[data-ai-action]').forEach(button => button.addEventListener('click', () => requestIslandGuidance(button.dataset.aiAction, island)));
-  $('#toggle-ai-sidecar').addEventListener('click', toggleAiSidecar);
-  document.querySelectorAll('[name^="chart-"]').forEach(field => field.addEventListener('input', updateAiProgress));
-  updateAiProgress();
+  document.querySelectorAll('[data-ai-action]').forEach(button => button.addEventListener('click', () => requestIslandGuidance(button.dataset.aiAction, island, button.closest('.chart-field, .chart-evidence'))));
   $('#edit-island-form').addEventListener('submit', saveIsland);
 }
 
@@ -341,10 +337,10 @@ function aiSidecarMarkup() {
   return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>Shape, explore, or challenge</h3><p>AI advice is separate from team content. It uses the visible Island and North Star; you choose what to write, save, or ignore.</p></header><div class="ai-actions"><button type="button" class="secondary" data-ai-action="formulate">Help formulate</button><button type="button" class="secondary" data-ai-action="alternatives">Explore alternatives</button><button type="button" class="secondary" data-ai-action="challenge">Challenge this Island</button></div><ol class="ai-progress" id="ai-progress"><li data-step="workflow_problem">Frame the workflow</li><li data-step="evidence">Separate evidence from assumptions</li><li data-step="outcome">Name a possible outcome</li><li data-step="learning_action">Choose a next learning action</li></ol><div class="ai-guidance"><p class="eyebrow">CURRENT LENS</p><p id="ai-guidance">Start with the work as it is today. What decision is delayed, and who is affected?</p></div><div class="ai-lenses"><button type="button" class="secondary ai-lens" data-lens="workflow">Workflow lens</button><button type="button" class="secondary ai-lens" data-lens="evidence">Evidence lens</button><button type="button" class="secondary ai-lens" data-lens="values">Value lens</button></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
 }
 
-async function requestIslandGuidance(action, island) {
+async function requestIslandGuidance(action, island, card) {
   const form = $('#edit-island-form');
   const currentIsland = {...island, title: form.elements.title.value.trim(), chart_room: chartRoomFrom(form)};
-  const guidance = $('#ai-guidance');
+  const guidance = $('.ai-inline-response', card);
   guidance.textContent = 'Preparing transparent guidance…';
   try {
     const result = await post('/api/workspace/ai-guidance', {action, island: currentIsland});
@@ -365,11 +361,12 @@ function chartRoomWithStartingPoint(island) {
 }
 
 function chartRoomCoreFields(chartRoom) {
-  return CHART_ROOM_FIELDS.filter(([, , , group]) => group.startsWith('core')).map(([id, label, hint, group]) => `<label class="chart-field ${group}">${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small></label>`).join('');
+  const actions = {workflow_problem: ['formulate', 'Help frame this'], ai_change: ['alternatives', 'Explore alternatives']};
+  return CHART_ROOM_FIELDS.filter(([, , , group]) => group.startsWith('core')).map(([id, label, hint, group]) => `<label class="chart-field ${group}">${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small>${actions[id] ? `<button type="button" class="text-button ai-inline-action" data-ai-action="${actions[id][0]}">${actions[id][1]} with AI</button><div class="ai-inline-response" aria-live="polite"></div>` : ''}</label>`).join('');
 }
 
 function chartEvidenceFields(chartRoom) {
-  return CHART_ROOM_FIELDS.filter(([, , , group]) => group === 'evidence').map(([id, label, hint]) => `<section class="chart-evidence ${id === 'unknowns' ? 'chart-unknowns' : ''}"><label>${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small></label></section>`).join('');
+  return CHART_ROOM_FIELDS.filter(([, , , group]) => group === 'evidence').map(([id, label, hint]) => `<section class="chart-evidence ${id === 'unknowns' ? 'chart-unknowns' : ''}"><label>${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small>${id === 'unknowns' ? '<button type="button" class="text-button ai-inline-action" data-ai-action="challenge">Challenge this Island with AI</button><div class="ai-inline-response" aria-live="polite"></div>' : ''}</label></section>`).join('');
 }
 
 function chartRoomDetails(chartRoom) {

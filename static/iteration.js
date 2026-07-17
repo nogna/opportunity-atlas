@@ -95,6 +95,10 @@ function render(payload) {
       <div class="compass" aria-hidden="true"><span>N</span><i></i></div>
       <div><p class="eyebrow">NORTH STAR · STRATEGIC CONTEXT</p><p class="north-star-copy">${escapeHtml(map.northStar || 'North Star context has not been set yet.')}</p></div>
     </section>
+    <aside class="demo-route" aria-label="Start here">
+      <div><p class="eyebrow">START HERE</p><h2>Trace one opportunity from signal to next learning step.</h2></div>
+      <ol><li>Open an Island to develop its Chart Room and visible values.</li><li>Choose <b>Expedition</b> to give selected Islands their own next learning action.</li><li>After confirmation, compare the living Map with that Expedition snapshot.</li></ol>
+    </aside>
     <section class="scouting-dock" aria-label="Personal Scouting notes">
       <div class="scouting-dock-heading"><div><p class="eyebrow">BEFORE EXPEDITION PLANNING</p><h2>Scouting notes</h2><p>Personal early signals—not yet Islands and not team evidence.</p></div><button class="secondary" id="add-scouting-note">+ Add a note</button></div>
       <div class="scouting-notes">${scoutingNotesMarkup(map.scoutingNotes)}</div>

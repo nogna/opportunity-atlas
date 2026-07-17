@@ -292,7 +292,11 @@ class AppHandler(SimpleHTTPRequestHandler):
             if self.path == "/api/workspace/expeditions":
                 workspace = load_workspace()
                 expedition = workspace.confirm_expedition(
-                    charters=payload.get("charters")
+                    charters=payload.get("charters"),
+                    planning_horizon=payload.get("planning_horizon", "Current planning cycle"),
+                    lens_weights=payload.get("lens_weights"),
+                    focus_order=payload.get("focus_order"),
+                    override_reason=payload.get("override_reason", ""),
                 )
                 save_workspace(workspace)
                 return self.send_json(

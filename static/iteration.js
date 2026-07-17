@@ -346,9 +346,10 @@ async function requestIslandGuidance(action, island, card) {
     const result = await post('/api/workspace/ai-guidance', {action, island: currentIsland});
     const draft = action === 'formulate' ? result.suggestions.join('\n') : result.suggestions.map(item => `• ${item}`).join('\n');
     const target = action === 'formulate' ? 'chart-workflow_problem' : action === 'alternatives' ? 'chart-ai_change' : 'chart-unknowns';
-    const bullets = action === 'formulate' ? `<p class="ai-draft">${escapeHtml(draft)}</p><button type="button" class="text-button use-ai-draft" data-target="${target}">Use this instead</button>` : `<ul class="ai-suggestion-list">${result.suggestions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+    const bullets = action === 'formulate' ? `<p class="ai-draft">${escapeHtml(draft)}</p><button type="button" class="text-button use-ai-draft" data-target="${target}">Use this instead</button>` : `<ul class="ai-suggestion-list">${result.suggestions.map(item => `<li><span>${escapeHtml(item)}</span><button type="button" class="add-ai-bullet" data-target="${target}" data-ai-text="${escapeHtml(item)}">+ Add</button></li>`).join('')}</ul>`;
     guidance.innerHTML = `<p class="eyebrow">${escapeHtml(result.source === 'local' ? 'LOCAL AI SUGGESTION' : 'AI SUGGESTION')}</p>${bullets}<small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
     $('.use-ai-draft', guidance)?.addEventListener('click', event => { const targetField = document.querySelector(`[name="${event.currentTarget.dataset.target}"]`); if (targetField) { targetField.value = draft; targetField.dispatchEvent(new Event('input')); } });
+    guidance.querySelectorAll('.add-ai-bullet').forEach(button => button.addEventListener('click', event => { const targetField = document.querySelector(`[name="${event.currentTarget.dataset.target}"]`); if (targetField) { targetField.value = `${targetField.value}${targetField.value ? '\n' : ''}${event.currentTarget.dataset.aiText}`; targetField.dispatchEvent(new Event('input')); event.currentTarget.textContent = 'Added'; event.currentTarget.disabled = true; } }));
   } catch (error) {
     guidance.textContent = error.message;
   }

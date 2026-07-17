@@ -8,7 +8,7 @@ Status: current product model
 - An **Opportunity Map** is that team's living atlas. It is named for the team or area, never becomes read-only, and evolves as Islands are discovered, changed, or archived.
 - A **Scouting note** is a lightweight, individually authored pre-meeting contribution for a possible Island. It is not yet an opportunity on the Map, but may later be transferred into one; the resulting Island preserves the note as visible provenance.
 - An **Island** is an AI opportunity. Teams can create an Island directly or transfer a Scouting note into it. The **Chart Room** is its deep-dive space: its opportunity hypothesis, supporting or challenging evidence, assumptions, unknowns, and visible evaluation values are developed there. It is one vertically scrolling workspace, not a tabbed form. Optional, contextual AI guidance appears in an AI sidecar and may offer a more guided setup without taking authorship. “Evidence board” and “Island-development workspace” are superseded user-facing names.
-- An **Expedition** is a first-class destination beside the Map. It is the team's focused, evidence-seeking collection of selected prepared Islands. Its intent is expressed through an **Island Charter** for each selected Island, rather than a generic Expedition mission. It does not repeat Island discovery or evaluation. It is sprint-like in intent but has no fixed duration or size.
+- An **Expedition** is a first-class destination beside the Map. It is the team's focused, evidence-seeking collection of selected prepared Islands. Its intent is expressed through an **Island Charter** for each selected Island, rather than a generic Expedition mission. A required planning horizon and an explainable, time-bound **Expedition lens** apply weights to existing Island values and the Workspace strategy to suggest a focus order. The team can adjust the lens or final order, with a recorded reason for an override. It does not repeat Island discovery or evaluation. It is sprint-like in intent but has no fixed duration or size.
 - Confirming an Expedition saves an immutable **Map snapshot**. The Map remains editable. When the Map later differs, the Expedition shows a calm comparison with the current Map: newly added personal Scouting notes are distinct from newly charted Islands, Island values show previous and current numbers, and a new cross-over where an unselected Island becomes stronger than a selected Island is a notice only—not an automatic re-ranking or Expedition change.
 - Only one Expedition is active per Map. Starting a new Expedition makes the prior one past.
 
@@ -26,7 +26,7 @@ Status: current product model
 - Start-a-new-Map carry-forward review for ordinary reprioritisation
 - Map focus as a primary product field
 - Shortlist and Next Opportunity decision
-- A separate Expedition ranking model
+- The earlier ban on an Expedition ranking model is superseded: an explainable, team-controlled Expedition lens now weights existing Island values for a time-bound focus order.
 - Mandatory “what changed?” notes
 
 ## Product boundary

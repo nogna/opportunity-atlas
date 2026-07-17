@@ -189,16 +189,19 @@ def local_island_guidance(action, island, north_star):
     suggestions = {
         "formulate": [
             f"Describe the decision or handoff in {workflow}",
+            f"Consider how this could support the North Star: {north_star or 'make the team’s strategy explicit.'}",
             "Name the human review point before describing the AI contribution.",
             "Turn the possible outcome into something the team could observe or measure.",
         ],
         "alternatives": [
             "Consider AI that surfaces patterns for human review, rather than acting on them.",
             "Consider a retrieval-backed brief with cited sources, rather than a free-form recommendation.",
+            "If one approach fits the North Star more naturally, note why—but keep promising exploratory alternatives visible.",
             "Consider starting with a small export or manual review loop before integrating systems.",
         ],
         "challenge": [
             f"What evidence beyond “{evidence}” would make the claimed value credible?",
+            f"Where does this Island support or create a tension with the North Star: {north_star or 'not yet recorded'}?",
             "What would make this AI-enabled change worse than the current workflow?",
             "Who can override the output, and how would they notice a harmful or weak result?",
         ],

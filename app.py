@@ -134,6 +134,11 @@ def workspace_payload(workspace: Workspace) -> dict:
         "is_editable": current.is_editable,
     }
     payload["expedition"] = workspace.current_expedition
+    if payload["expedition"] is not None:
+        payload["map_changes"] = {
+            "expedition_id": payload["expedition"]["id"],
+            **workspace.map_changes_for_expedition(payload["expedition"]["id"]),
+        }
     return payload
 
 

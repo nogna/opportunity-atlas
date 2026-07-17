@@ -222,6 +222,7 @@ function renderExpedition(payload) {
   $('#map-app').innerHTML = `<section class="expedition-page">
     <header class="expedition-heading"><p class="eyebrow">EXPEDITION · ISLAND FLAGS</p><h1>Give each Island its first leg.</h1><p>Choose prepared Islands from the living Map. Their Chart Room context and values stay inherited; an Island Charter only records what this Expedition will do next.</p></header>
     <section class="expedition-selector"><div><p class="eyebrow">ISLANDS ABOARD</p><h2>Choose the focus set</h2></div><div class="island-picks">${map.islands.map(island => `<label class="island-pick ${selectedIds.includes(island.id) ? 'island-pick--selected' : ''}"><input type="checkbox" data-select-island="${escapeHtml(island.id)}" ${selectedIds.includes(island.id) ? 'checked' : ''}><span><b>${escapeHtml(island.title)}</b><small>${escapeHtml(island.summary || island.description || 'Prepared Island')}</small></span></label>`).join('')}</div></section>
+    ${selected.length ? `<aside class="expedition-ai-guide"><div><p class="eyebrow">AI COMPASS · OPTIONAL</p><h2>Check the focus set</h2><p>Ask AI to connect these Islands and their next learning actions to the North Star. It only advises; the team keeps the decision.</p></div><button type="button" class="secondary" id="check-expedition-guidance">Check with AI</button><div class="expedition-ai-response" id="expedition-ai-response" aria-live="polite"></div></aside>` : ''}
     <section class="charter-flags">${selected.length ? selected.map(charterMarkup).join('') : '<p class="expedition-empty">Select one or more Islands to give them an Expedition-specific Charter. Their durable opportunity work remains in the Chart Room.</p>'}</section>
     <footer class="expedition-summary"><div><p class="eyebrow">EXPEDITION ASSEMBLED FROM CHARTERS</p><h2>${selected.length ? `${selected.length} Island${selected.length === 1 ? '' : 's'} aboard` : 'No Islands aboard yet'}</h2><p id="charter-progress">${selected.length ? `${selected.filter(island => expeditionDraft[island.id].next_learning_action?.trim()).length}/${selected.length} next learning actions named.` : 'No generic Expedition mission is required.'}</p></div><button class="primary" id="confirm-expedition" ${allActionsNamed ? '' : 'disabled'}>Confirm Map snapshot</button></footer>
     <p class="form-error" id="expedition-error" role="alert"></p>
@@ -235,7 +236,18 @@ function renderExpedition(payload) {
     expeditionDraft[field.dataset.islandId][field.dataset.charterField] = field.value;
     updateExpeditionControls();
   }));
+  $('#check-expedition-guidance')?.addEventListener('click', () => requestExpeditionGuidance(selected));
   $('#confirm-expedition').addEventListener('click', confirmExpedition);
+}
+
+async function requestExpeditionGuidance(selected) {
+  const response = $('#expedition-ai-response');
+  response.textContent = 'Checking the focus set…';
+  const island = {title: selected.map(item => item.title).join(', '), chart_room: {workflow_problem: selected.map(item => islandSummary(item, '')).join(' ')}};
+  try {
+    const result = await post('/api/workspace/ai-guidance', {action: 'expedition', island});
+    response.innerHTML = `<p class="eyebrow">${escapeHtml(result.source === 'local' ? 'LOCAL AI SUGGESTION' : 'AI SUGGESTION')}</p><ul>${result.suggestions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
+  } catch (error) { response.textContent = error.message; }
 }
 
 function updateExpeditionControls() {

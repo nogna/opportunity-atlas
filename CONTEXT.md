@@ -54,7 +54,7 @@ A read-only comparison between an Expedition's Map snapshot and the current livi
 
 ## AI suggestion
 
-Transparent, optional help embedded beside the relevant Chart Room work: formulation near the workflow, alternatives near the possible AI-enabled change, and critique near evidence and assumptions. Each response is a read-only AI-owned suggestion card. Alternative and challenge bullets can be individually dragged into the related team field; AI never changes it on its own. It treats the Workspace North Star as a compass rather than a gate: it may suggest useful alignment or surface a tension, but does not reject an exploratory Island. It visibly distinguishes team-provided information, assumptions, and suggestions, remains distinct from team-authored content, and never changes Island values, selects Islands, confirms an Expedition, or archives an Island without explicit team action.
+Transparent, optional help embedded beside the relevant Chart Room work: formulation near the workflow, alternatives near the possible AI-enabled change, and critique near evidence and assumptions. Each response remains read-only AI-owned material. Alternatives and critiques are plain bullet points; a formulation can be explicitly adopted with “Use this instead.” AI never changes a team field on its own. It treats the Workspace North Star as a compass rather than a gate: it may suggest useful alignment or surface a tension, but does not reject an exploratory Island. It visibly distinguishes team-provided information, assumptions, and suggestions, remains distinct from team-authored content, and never changes Island values, selects Islands, confirms an Expedition, or archives an Island without explicit team action.
 
 ## Evidence
 

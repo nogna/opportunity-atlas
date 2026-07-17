@@ -13,10 +13,12 @@
       <button type="button" class="destination-link is-active" data-destination="map">Map</button>
       <button type="button" class="destination-link" data-destination="expedition">Expedition</button>
     </nav>
+    <button type="button" class="map-help" id="open-map-help" aria-label="How Opportunity Atlas works">?</button>
     <span class="save-indicator" id="save-status" aria-live="polite">Saved</span>
   </header>
   <main class="map-main" id="map-app" aria-live="polite"></main>
   <dialog class="island-dialog" id="island-dialog"></dialog>
+  <dialog class="map-help-dialog" id="map-help-dialog"><button type="button" class="dialog-close" id="close-map-help" aria-label="Close">×</button><p class="eyebrow">HOW OPPORTUNITY ATLAS WORKS</p><h2>Start with the possibilities. Learn your way forward.</h2><ol><li><b>Map opportunities.</b> Add or develop Islands until the team has a shared view of what could be worth exploring.</li><li><b>Shape an Island.</b> Use its Chart Room to clarify the workflow, AI-enabled change, outcome, evidence, and current values.</li><li><b>Plan an Expedition.</b> Select the prepared Islands worth learning about now and give each a next learning action.</li></ol><p>Scouting notes and Map changes are available when they help; they are not required to begin.</p></dialog>
   <script src="iteration.js"></script>
 </body>
 </html>

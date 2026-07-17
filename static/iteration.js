@@ -99,15 +99,16 @@ function render(payload) {
       <div class="scouting-dock-heading"><div><p class="eyebrow">BEFORE EXPEDITION PLANNING</p><h2>Scouting notes</h2><p>Personal early signals—not yet Islands and not team evidence.</p></div><button class="secondary" id="add-scouting-note">+ Add a note</button></div>
       <div class="scouting-notes">${scoutingNotesMarkup(map.scoutingNotes)}</div>
     </section>
-    <section class="map-board" aria-label="Island map">
+    ${map.islands.length ? `<section class="map-board" aria-label="Island map">
       <div class="board-label"><span>THE SEA OF POSSIBILITIES</span><span>${map.islands.length} Island${map.islands.length === 1 ? '' : 's'} charted</span></div>
       <div class="waves waves--one"></div><div class="waves waves--two"></div>
       ${map.islands.map(islandMarkup).join('')}
       <button class="add-island" id="add-island"><span>+</span>Chart an Island</button>
       <p class="map-hint">Each Island holds its own visible values and the team's reasons for them.</p>
-    </section>`;
+    </section>` : `<section class="map-empty" aria-label="Empty Opportunity Map"><p class="eyebrow">YOUR MAP IS OPEN</p><h2>Start with an opportunity your team could explore.</h2><p>Chart an Island directly, or add a personal Scouting note to bring into the team conversation later.</p><button class="primary" id="add-island">Chart the first Island</button><button class="text-button" id="open-map-help-empty">How does this work?</button></section>`}`;
   $('#add-island').addEventListener('click', openAddIsland);
   $('#add-scouting-note').addEventListener('click', openAddScoutingNote);
+  $('#open-map-help-empty')?.addEventListener('click', openMapHelp);
   document.querySelectorAll('[data-island-id]').forEach(island => island.addEventListener('click', () => openIsland(island.dataset.islandId)));
   document.querySelectorAll('.transfer-note').forEach(button => button.addEventListener('click', () => openTransferScoutingNote(button.dataset.noteId)));
   document.querySelectorAll('.open-transferred-island').forEach(button => button.addEventListener('click', () => openIsland(button.dataset.islandId)));
@@ -476,5 +477,9 @@ document.querySelectorAll('[data-destination]').forEach(button => button.addEven
   expeditionDraft = {};
   if (workspace) render(workspace);
 }));
+
+function openMapHelp() { $('#map-help-dialog').showModal(); }
+$('#open-map-help')?.addEventListener('click', openMapHelp);
+$('#close-map-help')?.addEventListener('click', () => $('#map-help-dialog').close());
 
 loadWorkspace();

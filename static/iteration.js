@@ -346,8 +346,8 @@ async function requestIslandGuidance(action, island, card) {
     const result = await post('/api/workspace/ai-guidance', {action, island: currentIsland});
     const draft = action === 'formulate' ? result.suggestions.join('\n') : result.suggestions.map(item => `• ${item}`).join('\n');
     const target = action === 'formulate' ? 'chart-workflow_problem' : action === 'alternatives' ? 'chart-ai_change' : 'chart-unknowns';
-    guidance.innerHTML = `<p class="eyebrow">${escapeHtml(result.source === 'local' ? 'LOCAL AI DRAFT' : 'AI DRAFT')}</p><textarea class="ai-draft" aria-label="Editable AI draft">${escapeHtml(draft)}</textarea><button type="button" class="text-button copy-ai-draft" data-target="${target}">Copy to this card</button><small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
-    $('.copy-ai-draft', guidance).addEventListener('click', event => { const targetField = document.querySelector(`[name="${event.currentTarget.dataset.target}"]`); if (targetField) { targetField.value = $('.ai-draft', guidance).value; targetField.dispatchEvent(new Event('input')); } });
+    guidance.innerHTML = `<p class="eyebrow">${escapeHtml(result.source === 'local' ? 'LOCAL AI SUGGESTION' : 'AI SUGGESTION')}</p><pre class="ai-draft">${escapeHtml(draft)}</pre><button type="button" class="text-button use-ai-draft" data-target="${target}">Use this instead</button><small><b>Assumptions:</b> ${escapeHtml(result.assumptions.join(' '))}</small>`;
+    $('.use-ai-draft', guidance).addEventListener('click', event => { const targetField = document.querySelector(`[name="${event.currentTarget.dataset.target}"]`); if (targetField) { targetField.value = draft; targetField.dispatchEvent(new Event('input')); } });
   } catch (error) {
     guidance.textContent = error.message;
   }

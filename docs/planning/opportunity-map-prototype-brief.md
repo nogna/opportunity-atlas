@@ -4,7 +4,7 @@ Status: current product model
 
 ## Core model
 
-- A **Workspace** is for one team or distinct area and carries its North Star.
+- A **Workspace** is for one team or distinct area and carries its first-class North Star. In the old-atlas theme, AI vision is its enduring centre inscription; AI strategy is its plotted course of current priorities, goals, focus areas, and guardrails.
 - An **Opportunity Map** is that team's living atlas. It is named for the team or area, never becomes read-only, and evolves as Islands are discovered, changed, or archived.
 - A **Scouting note** is a lightweight, individually authored pre-meeting contribution for a possible Island. It is not yet an opportunity on the Map, but may later be transferred into one; the resulting Island preserves the note as visible provenance.
 - An **Island** is an AI opportunity. Teams can create an Island directly or transfer a Scouting note into it. The **Chart Room** is its deep-dive space: its opportunity hypothesis, supporting or challenging evidence, assumptions, unknowns, and visible evaluation values are developed there. It is one vertically scrolling workspace, not a tabbed form. Optional, contextual AI guidance appears in an AI sidecar and may offer a more guided setup without taking authorship. “Evidence board” and “Island-development workspace” are superseded user-facing names.
@@ -32,6 +32,10 @@ Status: current product model
 ## Product boundary
 
 Different teams or completely different areas use separate Workspaces. A new Expedition—not a new Map—handles the ordinary next focus for the same Map.
+
+## North Star context
+
+The North Star belongs to the Workspace, not a particular Map or Expedition. A Map uses it to help the team formulate Islands toward the AI vision, current strategy, and goals; it does not copy or redefine it. If the AI vision or strategy is missing, the Map shows a transparent, non-blocking warning and a setup action. A richer guided creation experience is deferred, but the entity and its missing state are first-class in the MVP.
 
 ## AI guidance
 

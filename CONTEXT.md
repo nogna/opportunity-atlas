@@ -14,7 +14,7 @@ An immutable record of how an Opportunity Map looked when an Expedition was conf
 
 ## North Star
 
-The Workspace's longer-lived AI vision or strategy. It gives the Map strategic context but is not an Island, a Map goal, or an AI-generated recommendation.
+A first-class, old-atlas Workspace entity. Its **AI vision** is the enduring centre inscription: the long-lived direction and principles for how AI should contribute. Its **AI strategy** is the plotted course: current priorities, concrete goals, focus areas, and guardrails. Maps do not duplicate it; AI uses it as a compass to help formulate Islands toward the stated goals and strategy, never as a gate that rejects exploratory work. When either part is missing, the product makes that visible and offers a non-blocking setup action.
 
 ## Island
 

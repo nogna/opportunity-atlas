@@ -54,7 +54,7 @@ A read-only comparison between an Expedition's Map snapshot and the current livi
 
 ## AI suggestion
 
-Proposed Island wording, missing-context prompts, trade-off explanations, or preparation actions. An AI suggestion visibly identifies assumptions and uncertainties, remains distinct from team-authored content, and never changes Island values, selects Islands, confirms an Expedition, or archives an Island without explicit team action.
+Transparent, optional help that can formulate an Island, propose alternative AI-enabled approaches, identify missing context, or challenge weak assumptions and trade-offs. It ties its advice to the Workspace North Star and visibly distinguishes team-provided information, assumptions, and suggestions. It remains distinct from team-authored content and never changes Island values, selects Islands, confirms an Expedition, or archives an Island without explicit team action.
 
 ## Evidence
 

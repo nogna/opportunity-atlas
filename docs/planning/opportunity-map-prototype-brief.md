@@ -22,6 +22,8 @@ Status: current product model
 The selected UI direction presents this journey with a compact rail: set the lens, choose Islands, then complete Charter details. The rail makes the flow legible without turning the vertically scrolling content into tabs or blocking exploration.
 
 In Charter details, selected Islands appear vertically in the focus order established by the ranked shortlist. The top-ranked Island carries a distinct first-focus treatment. The stage does not duplicate ranking or reordering controls.
+
+The active planning horizon and lens remain visible as a compact summary throughout Expedition planning and Charter details. Islands chosen from the shortlist are described plainly as **Added to this Expedition**, not “Islands aboard.”
 5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on. It keeps personal Scouting notes distinct from Islands, shows changed evaluation values as previous → current numbers, and calmly flags a newly stronger unselected Island without changing the Expedition.
 
 ## Explicitly retired

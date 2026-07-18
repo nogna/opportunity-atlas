@@ -281,6 +281,7 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .override-reason{display:block;margin-top:12px}
 .override-reason>span{color:#a34836;font-size:.67rem;font-weight:500}
 .charter-flags{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px;margin-top:18px}
+.charter-flags--stacked{grid-template-columns:1fr;max-width:760px;margin-left:auto;margin-right:auto}
 .island-flag{position:relative;padding:18px;border:1px solid #aa9365;background:#fff9eb;box-shadow:0 8px 15px rgba(86,65,22,.08)}
 .island-flag:before{content:"ISLAND CHARTER";position:absolute;right:13px;top:13px;color:#886f45;font:8px 'DM Mono',monospace;letter-spacing:.09em}
 .island-flag h3{margin:22px 0 10px;font:600 1.42rem/1.05 Fraunces,serif}

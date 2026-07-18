@@ -20,6 +20,8 @@ Status: current product model
 4. The team enters **Expedition planning**, sets the horizon and lens, and receives a ranked shortlist. The top Island is selected by default; the team may add more before creating or reviewing a compact Island Charter for each selected Island. It may surface the selected Islands' prepared hypotheses and gaps, but does not ask the team to restate them. The confirmed Expedition presents a summary of those Charters rather than requiring a generic mission.
 
 The selected UI direction presents this journey with a compact rail: set the lens, choose Islands, then complete Charter details. The rail makes the flow legible without turning the vertically scrolling content into tabs or blocking exploration.
+
+In Charter details, selected Islands appear vertically in the focus order established by the ranked shortlist. The stage does not duplicate ranking or reordering controls.
 5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on. It keeps personal Scouting notes distinct from Islands, shows changed evaluation values as previous → current numbers, and calmly flags a newly stronger unselected Island without changing the Expedition.
 
 ## Explicitly retired

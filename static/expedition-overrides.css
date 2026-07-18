@@ -25,3 +25,37 @@
   font-size: .78rem;
   line-height: 1.45;
 }
+
+.expedition-ready {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 18px;
+  padding: 20px 22px;
+  border: 1px solid #d1c09a;
+  border-left: 4px solid #456c62;
+  background: #f7f0dc;
+}
+
+.expedition-ready h2 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.expedition-ready p:last-child {
+  max-width: 620px;
+  margin: 0;
+  color: #564c39;
+}
+
+.expedition-ready .primary {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 700px) {
+  .expedition-ready {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

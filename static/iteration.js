@@ -127,35 +127,15 @@ function selectedExpeditionIds() {
   return Object.keys(expeditionDraft).filter(id => !id.startsWith('__'));
 }
 
-function proposedExpeditionLens(map, selected) {
-  const horizon = (expeditionDraft.__horizon || '').toLowerCase();
-  const strategy = (map.northStar || '').toLowerCase();
-  const average = id => selected.length ? selected.reduce((total, island) => total + (island.evaluation?.[id]?.score ?? 3), 0) / selected.length : 3;
-  const shortHorizon = /day|week|sprint|0?1\s*month/.test(horizon);
-  const lens = shortHorizon ? {value: 1, readiness: 3, effort: 3} : {value: 2, readiness: 2, effort: 1};
-  if (/trust|risk|safe|accountab|govern/.test(strategy)) lens.readiness += 1;
-  if (average('readiness') < 3) lens.readiness += 1;
-  if (average('effort') > 3) lens.effort += 1;
-  return lens;
+function expeditionLens() {
+  return expeditionDraft.__lens || {value: 3, readiness: 3, effort: 2};
 }
 
-function lensSuggestionExplanation(map, selected) {
-  const horizon = expeditionDraft.__horizon?.trim();
-  if (!horizon) return 'Add a horizon and choose Islands to tailor this starting lens.';
-  const strategy = map.northStar ? 'It also keeps your North Star in view.' : 'Add a North Star later to make this guidance more strategic.';
-  return `For ${horizon}, the starting lens favours ${proposedExpeditionLens(map, selected).readiness >= 3 ? 'readiness and manageable effort' : 'balanced value and readiness'}. ${strategy}`;
-}
-
-function lensWeightReason(id, map, selected) {
-  const horizon = expeditionDraft.__horizon?.trim() || 'the planning horizon';
-  const average = selected.length ? selected.reduce((total, island) => total + (island.evaluation?.[id]?.score ?? 3), 0) / selected.length : 3;
-  if (id === 'readiness') return `${horizon}: emphasised because the selected Islands average ${average.toFixed(1)}/5 readiness${map.northStar ? ' and the North Star is kept in view' : ''}.`;
-  if (id === 'effort') return `${horizon}: lower effort helps a short, practical first leg; the selected average is ${average.toFixed(1)}/5.`;
-  return `${horizon}: potential value remains visible, while execution context can change its emphasis.`;
-}
-
-function expeditionLens(map, selected) {
-  return expeditionDraft.__lens || proposedExpeditionLens(map, selected);
+function planningHorizon() {
+  const length = expeditionDraft.__windowLength || 6;
+  const unit = expeditionDraft.__windowUnit || 'weeks';
+  const boundBy = expeditionDraft.__boundBy?.trim();
+  return `${length} ${unit}${boundBy ? ` · ${boundBy}` : ''}`;
 }
 
 function expeditionLensScore(island, lens) {
@@ -278,27 +258,23 @@ function renderExpedition(payload) {
     $('#show-map-changes').addEventListener('click', () => { activeDestination = 'map-changes'; render(workspace); });
     return;
   }
-  const phase = expeditionDraft.__phase || 'select';
-  const candidateLens = expeditionLens(map, map.islands);
-  const rankedIds = suggestedExpeditionOrder(map.islands, candidateLens);
-  if (!expeditionDraft.__started && rankedIds[0]) {
-    expeditionDraft[rankedIds[0]] = {};
-    expeditionDraft.__started = true;
-  }
+  const phase = expeditionDraft.__phase || 'lens';
+  const lens = expeditionLens();
+  const rankedIds = suggestedExpeditionOrder(map.islands, lens);
   const selectedIds = selectedExpeditionIds();
   const selected = map.islands.filter(island => selectedIds.includes(island.id));
-  const lens = expeditionLens(map, selected);
   const suggestedSelectionOrder = suggestedExpeditionOrder(selected, lens);
   const focusOrder = focusOrderFor(selected, suggestedSelectionOrder);
   const orderIsOverridden = focusOrder.join('|') !== suggestedSelectionOrder.join('|');
   const allActionsNamed = selected.length && selected.every(island => expeditionDraft[island.id].next_learning_action?.trim());
   const ranked = rankedIds.map(id => map.islands.find(island => island.id === id));
   const visibleRanked = expeditionDraft.__showMore ? ranked : ranked.slice(0, 5);
-  const rail = `<aside class="expedition-rail"><p class="eyebrow">EXPEDITION PLANNING</p><ol><li class="is-active"><span>1</span> Set lens</li><li class="is-active"><span>2</span> Choose Islands</li><li class="${phase === 'charter' ? 'is-active' : ''}"><span>3</span> Charter details</li></ol></aside>`;
-  const planning = `<section class="expedition-stage"><section class="expedition-lens"><header><div><p class="eyebrow">1 · SET THE PLANNING LENS</p><h2>What matters in this horizon?</h2><p>The AI Compass suggests emphasis from the horizon, existing Island values, and your North Star. Team choices stay visible and adjustable.</p><p class="lens-proposal-note">${escapeHtml(lensSuggestionExplanation(map, selected))}</p></div><details><summary>How is this calculated?</summary><p>Higher value and readiness help an Island rise. Lower effort helps it rise. Missing values are neutral.</p></details></header><div class="lens-weights"><label>Planning horizon<span>Required</span><input id="planning-horizon" value="${escapeHtml(expeditionDraft.__horizon || '')}" placeholder="e.g. Next 6 weeks"></label>${DIMENSIONS.map(([id, label]) => `<label>${escapeHtml(label)}<input type="number" min="0" max="5" step="1" data-lens-weight="${id}" value="${lens[id]}"><small>${escapeHtml(lensWeightReason(id, map, selected))}</small></label>`).join('')}</div></section><section class="expedition-ranking"><header><div><p class="eyebrow">2 · RANKED SHORTLIST</p><h2>What rises to the surface?</h2><p>The highest-ranked Island starts selected. Add any others before continuing.</p></div><b>${ranked.length} ranked</b></header><div class="ranked-islands">${visibleRanked.map((island, index) => `<article class="ranked-island ${index === 0 ? 'ranked-island--top' : ''}"><span>${index + 1}</span><div><b>${escapeHtml(island.title)}</b><small>${escapeHtml(island.summary || island.description || 'Prepared Island')}</small></div><div><em>${expeditionLensScore(island, lens).toFixed(1)}</em><button class="secondary" data-select-island="${escapeHtml(island.id)}">${selectedIds.includes(island.id) ? 'Selected' : 'Add'}</button></div></article>`).join('')}</div>${!expeditionDraft.__showMore && ranked.length > 5 ? '<button class="text-button" id="show-more-ranked">Show more ranked Islands</button>' : ''}</section><aside class="expedition-selected-set"><div><p class="eyebrow">SELECTED FOR THIS EXPEDITION</p><h2>${selected.length} Island${selected.length === 1 ? '' : 's'} aboard</h2></div><div>${selected.map(island => `<p><b>${escapeHtml(island.title)}</b><button class="text-button" data-select-island="${escapeHtml(island.id)}">Remove</button></p>`).join('')}</div><p>Selections stay put if the lens or Map changes. A newly stronger Island is surfaced, never silently substituted.</p><button class="primary" id="continue-to-charters">Continue to Charter details →</button></aside></section>`;
-  const charters = `<section class="expedition-stage"><header class="expedition-heading"><p class="eyebrow">3 · CHARTER DETAILS</p><h1>Give each chosen Island its first leg.</h1><p>These next learning actions belong to this Expedition. The Island’s evidence and values remain in the Chart Room.</p></header><section class="charter-flags charter-flags--stacked">${focusOrder.map((id, index) => charterMarkup(selected.find(island => island.id === id), index === 0)).join('')}</section><footer class="expedition-summary"><div><p class="eyebrow">EXPEDITION ASSEMBLED FROM CHARTERS</p><h2>${selected.length} Island${selected.length === 1 ? '' : 's'} aboard</h2><p id="charter-progress">${selected.filter(island => expeditionDraft[island.id].next_learning_action?.trim()).length}/${selected.length} next learning actions named.</p></div><div><button class="secondary" id="back-to-selection">← Back to selection</button><button class="primary" id="confirm-expedition" ${allActionsNamed && expeditionDraft.__horizon?.trim() && (!orderIsOverridden || expeditionDraft.__overrideReason?.trim()) ? '' : 'disabled'}>Confirm Map snapshot</button></div></footer><p class="form-error" id="expedition-error" role="alert"></p></section>`;
+  const rail = `<aside class="expedition-rail"><p class="eyebrow">EXPEDITION PLANNING</p><ol><li class="${phase === 'lens' ? 'is-active' : ''}"><span>1</span> Set lens</li><li class="${phase === 'select' ? 'is-active' : ''}"><span>2</span> Choose Islands</li><li class="${phase === 'charter' ? 'is-active' : ''}"><span>3</span> Charter details</li></ol></aside>`;
+  const lensMarkup = `<section class="expedition-stage expedition-lens-stage"><section class="expedition-lens"><header><div><p class="eyebrow">1 · RANKING SEALED</p><h2>What should make an Island worth exploring now?</h2><p>Set a timebox and decide what matters before the Map reveals any Island order, score, or recommendation.</p></div></header><div class="lens-window"><label>Plan for<span class="lens-timebox"><input type="number" id="planning-window-length" min="1" value="${escapeHtml(expeditionDraft.__windowLength || 6)}"><select id="planning-window-unit"><option ${expeditionDraft.__windowUnit === 'months' ? '' : 'selected'}>weeks</option><option ${expeditionDraft.__windowUnit === 'months' ? 'selected' : ''}>months</option><option ${expeditionDraft.__windowUnit === 'quarters' ? 'selected' : ''}>quarters</option></select></span></label><label>Bound by <small>optional</small><input id="planning-bound-by" value="${escapeHtml(expeditionDraft.__boundBy || '')}" placeholder="e.g. before the autumn launch"></label></div><div class="lens-weights">${DIMENSIONS.map(([id, label, description]) => `<label>${escapeHtml(label)}<input type="range" min="0" max="5" step="1" data-lens-weight="${id}" value="${lens[id]}"><output>${lens[id]}</output><small>${escapeHtml(description)}</small></label>`).join('')}</div><footer class="lens-reveal"><p><b>Ranking sealed.</b> Changes update the result in the background. Reveal it only when the team is ready.</p><button class="primary" id="reveal-ranked-islands">Reveal ranked Islands →</button></footer></section><aside class="expedition-compass"><div class="expedition-compass-mark">✦</div><p class="eyebrow">THE COMPASS IS QUIET</p><h3>Choose deliberately.</h3><p>Your Island values will inform the later ranking. This step is only about the team’s priorities for this Expedition.</p></aside></section>`;
+  const selectionMarkup = `<section class="expedition-stage"><section class="expedition-ranking"><header><div><p class="eyebrow">2 · RANKED SHORTLIST</p><h2>What rises to the surface?</h2><p>These results use the weights you just set and the values recorded on each Island.</p></div><b>${ranked.length} ranked</b></header><div class="ranked-islands">${visibleRanked.map((island, index) => `<article class="ranked-island ${index === 0 ? 'ranked-island--top' : ''}"><span>${index + 1}</span><div><b>${escapeHtml(island.title)}</b><small>${escapeHtml(island.summary || island.description || 'Prepared Island')}</small></div><div><em>${expeditionLensScore(island, lens).toFixed(1)}</em><button class="secondary" data-select-island="${escapeHtml(island.id)}">${selectedIds.includes(island.id) ? 'Remove' : index === 0 ? 'Accept recommended Island' : 'Add'}</button></div></article>`).join('')}</div>${!expeditionDraft.__showMore && ranked.length > 5 ? '<button class="text-button" id="show-more-ranked">Show more ranked Islands</button>' : ''}</section><aside class="expedition-selected-set"><div><p class="eyebrow">IN THIS EXPEDITION</p><h2>${selected.length} Island${selected.length === 1 ? '' : 's'} aboard</h2></div><div>${selected.map(island => `<p><b>${escapeHtml(island.title)}</b><button class="text-button" data-select-island="${escapeHtml(island.id)}">Remove</button></p>`).join('')}</div><p>${selected.length ? 'Add more Islands if the team needs to learn about them together.' : 'Accept the recommendation or add any Island to continue.'}</p><button class="primary" id="continue-to-charters" ${selected.length ? '' : 'disabled'}>Continue to Charter details →</button></aside></section>`;
+  const charters = `<section class="expedition-stage"><header class="expedition-heading"><p class="eyebrow">3 · CHARTER DETAILS</p><h1>Give each chosen Island its first leg.</h1><p>These next learning actions belong to this Expedition. The Island’s evidence and values remain in the Chart Room.</p></header><section class="charter-flags charter-flags--stacked">${focusOrder.map((id, index) => charterMarkup(selected.find(island => island.id === id), index === 0)).join('')}</section><footer class="expedition-summary"><div><p class="eyebrow">EXPEDITION ASSEMBLED FROM CHARTERS</p><h2>${selected.length} Island${selected.length === 1 ? '' : 's'} aboard</h2><p id="charter-progress">${selected.filter(island => expeditionDraft[island.id].next_learning_action?.trim()).length}/${selected.length} next learning actions named.</p></div><div><button class="secondary" id="back-to-selection">← Back to selection</button><button class="primary" id="confirm-expedition" ${allActionsNamed && (!orderIsOverridden || expeditionDraft.__overrideReason?.trim()) ? '' : 'disabled'}>Confirm Map snapshot</button></div></footer><p class="form-error" id="expedition-error" role="alert"></p></section>`;
   $('#map-app').innerHTML = `<section class="expedition-page">
-    <div class="expedition-journey">${rail}${phase === 'charter' ? charters : planning}</div>
+    <div class="expedition-journey">${rail}${phase === 'lens' ? lensMarkup : phase === 'charter' ? charters : selectionMarkup}</div>
   </section>`;
   document.querySelectorAll('[data-select-island]').forEach(input => input.addEventListener('click', () => {
     if (!selectedIds.includes(input.dataset.selectIsland)) expeditionDraft[input.dataset.selectIsland] = expeditionDraft[input.dataset.selectIsland] || {};
@@ -309,11 +285,9 @@ function renderExpedition(payload) {
     expeditionDraft[field.dataset.islandId][field.dataset.charterField] = field.value;
     updateExpeditionControls();
   }));
-  $('#planning-horizon')?.addEventListener('input', event => { expeditionDraft.__horizon = event.target.value; });
-  $('#planning-horizon')?.addEventListener('change', () => render(workspace));
   document.querySelectorAll('[data-lens-weight]').forEach(input => input.addEventListener('input', () => {
     expeditionDraft.__lens = {...lens, [input.dataset.lensWeight]: Number(input.value)};
-    render(workspace);
+    input.nextElementSibling.value = input.value;
   }));
   document.querySelectorAll('[data-move-focus]').forEach(button => button.addEventListener('click', () => {
     const position = expeditionDraft.__focusOrder.indexOf(button.dataset.islandId);
@@ -323,6 +297,10 @@ function renderExpedition(payload) {
   }));
   $('#override-reason')?.addEventListener('input', event => { expeditionDraft.__overrideReason = event.target.value; updateExpeditionControls(); });
   $('#show-more-ranked')?.addEventListener('click', () => { expeditionDraft.__showMore = true; render(workspace); });
+  $('#planning-window-length')?.addEventListener('input', event => { expeditionDraft.__windowLength = Number(event.target.value); });
+  $('#planning-window-unit')?.addEventListener('change', event => { expeditionDraft.__windowUnit = event.target.value; });
+  $('#planning-bound-by')?.addEventListener('input', event => { expeditionDraft.__boundBy = event.target.value; });
+  $('#reveal-ranked-islands')?.addEventListener('click', () => { expeditionDraft.__phase = 'select'; render(workspace); });
   $('#continue-to-charters')?.addEventListener('click', () => { expeditionDraft.__phase = 'charter'; render(workspace); });
   $('#back-to-selection')?.addEventListener('click', () => { expeditionDraft.__phase = 'select'; render(workspace); });
   $('#confirm-expedition')?.addEventListener('click', confirmExpedition);
@@ -333,10 +311,10 @@ function updateExpeditionControls() {
   const actions = selected.filter(([, charter]) => charter.next_learning_action?.trim()).length;
   const map = currentMap(workspace);
   const islands = map.islands.filter(island => selected.some(([id]) => id === island.id));
-  const suggestion = suggestedExpeditionOrder(islands, expeditionLens(map, islands));
+  const suggestion = suggestedExpeditionOrder(islands, expeditionLens());
   const overridden = (expeditionDraft.__focusOrder || []).join('|') !== suggestion.join('|');
   $('#charter-progress').textContent = `${actions}/${selected.length} next learning actions named.`;
-  $('#confirm-expedition').disabled = !selected.length || actions !== selected.length || !expeditionDraft.__horizon?.trim() || (overridden && !expeditionDraft.__overrideReason?.trim());
+  $('#confirm-expedition').disabled = !selected.length || actions !== selected.length || (overridden && !expeditionDraft.__overrideReason?.trim());
 }
 
 async function confirmExpedition() {
@@ -345,7 +323,7 @@ async function confirmExpedition() {
     $('#confirm-expedition').disabled = true;
     const map = currentMap(workspace);
     const selected = map.islands.filter(island => charters.some(charter => charter.island_id === island.id));
-    await post('/api/workspace/expeditions', {charters, planning_horizon: expeditionDraft.__horizon, lens_weights: expeditionLens(map, selected), focus_order: expeditionDraft.__focusOrder, override_reason: expeditionDraft.__overrideReason || ''});
+    await post('/api/workspace/expeditions', {charters, planning_horizon: planningHorizon(), lens_weights: expeditionLens(), focus_order: expeditionDraft.__focusOrder, override_reason: expeditionDraft.__overrideReason || ''});
     expeditionDraft = {};
     await loadWorkspace();
   } catch (error) {

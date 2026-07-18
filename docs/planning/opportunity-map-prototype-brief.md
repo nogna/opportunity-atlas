@@ -23,7 +23,7 @@ The selected UI direction presents this journey with a compact rail: set the len
 
 In Charter details, selected Islands appear vertically in the focus order established by the ranked shortlist. The top-ranked Island carries a distinct first-focus treatment. The stage does not duplicate ranking or reordering controls.
 
-The active planning horizon and lens remain visible as a compact summary throughout Expedition planning and Charter details. It sits directly below the left-side journey guide, separate from the editable content of each stage. Islands chosen from the shortlist are described plainly as **Added to this Expedition**, not “Islands aboard.”
+The active planning horizon and lens remain visible as a compact summary throughout Expedition planning and Charter details. It sits directly below the left-side journey guide, separate from the editable content of each stage, and shows only the horizon plus Value, Readiness, and Effort weights. Islands chosen from the shortlist are described plainly as **Added to this Expedition**, not “Islands aboard.”
 5. The confirmed Expedition retains its Map snapshot. The live Map may continue changing; comparison explains how it moved on. It keeps personal Scouting notes distinct from Islands, shows changed evaluation values as previous → current numbers, and calmly flags a newly stronger unselected Island without changing the Expedition.
 
 ## Explicitly retired

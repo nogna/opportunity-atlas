@@ -38,7 +38,7 @@ A first-class, team-confirmed, evidence-seeking commitment to the one Island the
 
 ## Expedition planning
 
-The pre-confirmation Map activity where the team sets its planning horizon and weighting lens, then receives a paginated ranked shortlist: the top five Islands appear first, with an explicit way to continue through the remaining ranked Islands. The highest-ranked Island starts selected, and the team can add more into a selected set. Changing the lens, horizon, or Map while planning never silently removes a selected Island; if another Island becomes top-ranked, the product makes that clear. Only after it continues does the team create Charters and next learning actions for that selected set. It is not a separate durable artifact: it leads into the confirmed Expedition and its Island Charters.
+The pre-confirmation Map activity has two parts. First, the team sets its planning horizon and weighting lens without seeing Island rankings, so it can make those choices without bias from current scores. It explicitly reveals the resulting live ranking only when ready. Second, it accepts the top Island or adds more into its Expedition plan, then creates Charters and next learning actions for that selected set. Changing the lens, horizon, or Map never silently removes a selected Island; if another Island becomes top-ranked, the product makes that clear. It is not a separate durable artifact: it leads into the confirmed Expedition and its Island Charters.
 
 ## Expedition lens
 

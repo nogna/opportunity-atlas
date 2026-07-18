@@ -34,7 +34,11 @@ An Island the team has removed from the active Map because it no longer belongs.
 
 ## Expedition
 
-A first-class, team-confirmed, evidence-seeking collection of selected Islands from an Opportunity Map. Its intent is expressed through an Island Charter for each selected Island. An Expedition has a required planning horizon and an explainable, time-bound **Expedition lens**: it applies weights to existing Island values using that horizon and the Workspace strategy to suggest a focus order. The team can adjust the lens and final order; an override reason is recorded when the final order differs. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+A first-class, team-confirmed, evidence-seeking commitment to the one Island the team will explore next, unless it explicitly chooses a broader commitment during Expedition planning. Its intent is expressed through an Island Charter for each included Island. An Expedition has a required planning horizon and an explainable, time-bound **Expedition lens**: it applies weights to existing Island values using that horizon and the Workspace strategy to suggest a focus order. The team can adjust the lens and final order; an override reason is recorded when the final order differs. An Expedition is sprint-like in intent but has no fixed duration; its intended Island count is chosen for each planning session and defaults to one. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+
+## Expedition planning
+
+The pre-confirmation Map activity where the team states its intended number of Islands, planning horizon, and weighting lens, then receives a suggested top set and focus order. It is not a separate durable artifact: it leads into the confirmed Expedition and its Island Charters.
 
 ## Expedition lens
 

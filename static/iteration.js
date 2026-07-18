@@ -105,10 +105,15 @@ function render(payload) {
       ${map.islands.map(islandMarkup).join('')}
       <button class="add-island" id="add-island"><span>+</span>Chart an Island</button>
       <p class="map-hint">Each Island holds its own visible values and the team's reasons for them.</p>
-    </section>` : `<section class="map-empty" aria-label="Empty Opportunity Map"><p class="eyebrow">YOUR MAP IS OPEN</p><h2>Start with an opportunity your team could explore.</h2><p>Chart an Island directly, or add a personal Scouting note to bring into the team conversation later.</p><button class="primary" id="add-island">Chart the first Island</button><button class="text-button" id="open-map-help-empty">How does this work?</button></section>`}`;
+    </section>${payload.expedition ? '' : `
+    <aside class="expedition-ready" aria-label="Expedition planning next step">
+      <div><p class="eyebrow">WHEN THE TEAM IS READY</p><h2>Plan an Expedition from your Islands.</h2><p>Set what matters for this planning window, reveal a ranked shortlist, then choose the Islands to investigate next.</p></div>
+      <button class="primary" id="plan-expedition">Plan an Expedition →</button>
+    </aside>`}` : `<section class="map-empty" aria-label="Empty Opportunity Map"><p class="eyebrow">YOUR MAP IS OPEN</p><h2>Start with an opportunity your team could explore.</h2><p>Chart an Island directly, or add a personal Scouting note to bring into the team conversation later.</p><button class="primary" id="add-island">Chart the first Island</button><button class="text-button" id="open-map-help-empty">How does this work?</button></section>`}`;
   $('#add-island').addEventListener('click', openAddIsland);
   $('#add-scouting-note').addEventListener('click', openAddScoutingNote);
   $('#open-map-help-empty')?.addEventListener('click', openMapHelp);
+  $('#plan-expedition')?.addEventListener('click', () => { activeDestination = 'expedition'; render(workspace); });
   document.querySelectorAll('[data-island-id]').forEach(island => island.addEventListener('click', () => openIsland(island.dataset.islandId)));
   document.querySelectorAll('.transfer-note').forEach(button => button.addEventListener('click', () => openTransferScoutingNote(button.dataset.noteId)));
   document.querySelectorAll('.open-transferred-island').forEach(button => button.addEventListener('click', () => openIsland(button.dataset.islandId)));

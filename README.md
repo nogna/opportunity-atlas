@@ -25,7 +25,7 @@ The app opens a seeded Workspace, so this path needs no account or data entry:
 1. Start on the living **Map**. Its North Star provides the strategic context; each Island is an AI opportunity with visible value, readiness, and effort.
 2. Open an **Island** and use its **Chart Room** to capture the current workflow, possible AI-enabled change, outcome, team evidence, unknowns, and explained evaluation values. The AI Compass is guidance only.
 3. Optionally add a personal **Scouting note**, then explicitly chart it as an Island when the team is ready.
-4. Open **Expedition**, select prepared Islands, and give each an **Island Charter** with its next learning action. Confirming it saves a Map snapshot.
+4. Open **Expedition**, select prepared Islands, set a planning horizon, and give each an **Island Charter** with its next learning action. The suggested lens and focus order use the Islands’ values; the team can adjust either, recording a reason for an order override. Confirming saves this decision and a Map snapshot.
 5. Keep the Map living. **Compare Map changes** later to see added Notes and Islands, changed values, and any new unselected Island that now outranks a selected one. The Expedition is never changed automatically.
 
 To reset a locally changed demo Workspace, stop the server and remove `data/workspace.json`; the next launch recreates the seed.

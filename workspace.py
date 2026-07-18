@@ -414,15 +414,25 @@ class Workspace:
             None,
         )
 
-    def confirm_expedition(self, *, charters: list[dict]) -> dict:
+    def confirm_expedition(
+        self,
+        *,
+        charters: list[dict],
+        planning_horizon: str = "Current planning cycle",
+        lens_weights: dict | None = None,
+        focus_order: list[str] | None = None,
+        override_reason: str = "",
+    ) -> dict:
         """Confirm Island-specific Charters and preserve the current Map state.
 
-        An Expedition does not formulate a new Map-wide goal or recalculate an
-        Island ranking. Each Charter simply says what the team will learn or do
-        next for one selected, already-charted Island.
+        An Expedition does not rewrite Island values. It applies a temporary,
+        explicit lens to the selected Islands so a team can choose a focus
+        order appropriate for this planning horizon.
         """
         if not isinstance(charters, list) or not charters:
             raise ValueError("An Expedition needs at least one Island Charter.")
+        if not isinstance(planning_horizon, str) or not planning_horizon.strip():
+            raise ValueError("An Expedition needs a planning horizon.")
 
         current = self.current_iteration
         known_islands = {island["id"] for island in current.opportunities}
@@ -449,6 +459,38 @@ class Workspace:
             selected_island_ids.add(island_id)
             validated_charters.append(normalized)
 
+        selected_ids = [charter["island_id"] for charter in validated_charters]
+        lens_weights = (
+            {"value": 1, "readiness": 1, "effort": 1}
+            if lens_weights is None
+            else lens_weights
+        )
+        if not isinstance(lens_weights, dict):
+            raise ValueError("An Expedition needs an explained weighting lens.")
+        if set(lens_weights) != set(ISLAND_EVALUATION_DIMENSION_IDS):
+            raise ValueError("Expedition lens weights must cover value, readiness, and effort.")
+        if not all(
+            isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
+            for value in lens_weights.values()
+        ):
+            raise ValueError("Expedition lens weights must be non-negative numbers.")
+        if not any(lens_weights.values()):
+            raise ValueError("An Expedition lens needs at least one non-zero weight.")
+        suggested_focus_order = self._suggested_expedition_focus_order(
+            selected_ids, lens_weights
+        )
+        focus_order = suggested_focus_order if focus_order is None else focus_order
+        if not isinstance(focus_order, list):
+            raise ValueError("Focus order must be a list of selected Islands.")
+        if not all(isinstance(island_id, str) for island_id in focus_order):
+            raise ValueError("Focus order must contain Island identifiers.")
+        if set(focus_order) != set(selected_ids) or len(focus_order) != len(selected_ids):
+            raise ValueError("Focus order must include each selected Island once.")
+        if not isinstance(override_reason, str):
+            raise ValueError("An Expedition override reason must be text.")
+        if list(focus_order) != suggested_focus_order and not override_reason.strip():
+            raise ValueError("Changing the suggested focus order needs a short reason.")
+
         active = self.current_expedition
         if active is not None:
             active["status"] = "past"
@@ -460,16 +502,61 @@ class Workspace:
             "islands": deepcopy(current.opportunities),
             "scouting_notes": deepcopy(current.scouting_notes),
         }
+        lens_inputs = {
+            island_id: deepcopy(
+                next(island for island in current.opportunities if island["id"] == island_id).get(
+                    "evaluation", {}
+                )
+            )
+            for island_id in selected_ids
+        }
+        snapshot["expedition_lens"] = {
+            "planning_horizon": planning_horizon.strip(),
+            "weights": deepcopy(lens_weights),
+            "island_values_used": deepcopy(lens_inputs),
+            "suggested_focus_order": list(suggested_focus_order),
+            "final_focus_order": list(focus_order),
+            "override_reason": override_reason.strip(),
+        }
         expedition = {
             "id": f"expedition-{uuid4().hex}",
             "status": "active",
-            "selected_island_ids": [charter["island_id"] for charter in validated_charters],
+            "selected_island_ids": selected_ids,
             "charters": validated_charters,
+            "planning_horizon": planning_horizon.strip(),
+            "lens_weights": deepcopy(lens_weights),
+            "lens_inputs": lens_inputs,
+            "lens_context": {"workspace_strategy": current.north_star},
+            "suggested_focus_order": suggested_focus_order,
+            "focus_order": list(focus_order),
+            "override_reason": override_reason.strip(),
             "map_snapshot": snapshot,
             "confirmed_at": self._timestamp(),
         }
         current.expeditions.append(expedition)
         return expedition
+
+    def _suggested_expedition_focus_order(
+        self, selected_ids: list[str], lens_weights: dict[str, int | float]
+    ) -> list[str]:
+        """Rank selected Islands under a temporary Expedition lens.
+
+        Missing values are neutral rather than being quietly treated as either
+        promising or weak. Lower effort is better, so it is inverted here but
+        never changed on the Island itself.
+        """
+        islands_by_id = {island["id"]: island for island in self.current_iteration.opportunities}
+
+        def lens_score(island_id: str) -> float:
+            evaluation = islands_by_id[island_id].get("evaluation", {})
+            total = 0.0
+            for dimension in ISLAND_EVALUATION_DIMENSION_IDS:
+                score = evaluation.get(dimension, {}).get("score", 3)
+                adjusted = 6 - score if dimension == "effort" else score
+                total += lens_weights[dimension] * adjusted
+            return total
+
+        return sorted(selected_ids, key=lambda island_id: (-lens_score(island_id), island_id))
 
     def map_changes_for_expedition(self, expedition_id: str) -> dict:
         """Compare a confirmed Expedition's immutable Map snapshot to today.

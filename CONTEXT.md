@@ -42,7 +42,7 @@ The pre-confirmation Map activity where the team sets its planning horizon and w
 
 ## Expedition lens
 
-The time-bound weighting of the evaluation values already configured on Islands for one Expedition. AI may propose initial category emphasis from the planning horizon and Workspace strategy, with a visible explanation. A separate **AI influence** control makes the AI proposal count more or less against the team's own category emphasis; at zero, the team values and emphasis determine the suggestion. The team owns every weight and the resulting focus order. Its snapshot preserves the horizon, values used, category emphasis, AI influence, suggested order, final order, and any override reason.
+The time-bound weighting of the evaluation values already configured on Islands for one Expedition. AI may propose initial category emphasis from the planning horizon and Workspace strategy, with a visible explanation. A separate **AI influence** control makes the AI proposal count more or less against the team's own category emphasis: at zero, the ranking uses only the team's lens while the AI proposal remains visible as reference. The team owns every weight and the resulting focus order. Its snapshot preserves the horizon, values used, category emphasis, AI influence, suggested order, final order, and any override reason.
 
 ## Island Charter
 

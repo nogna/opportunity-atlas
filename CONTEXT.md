@@ -34,11 +34,15 @@ An Island the team has removed from the active Map because it no longer belongs.
 
 ## Expedition
 
-A first-class, team-confirmed, evidence-seeking collection of selected Islands from an Opportunity Map. Its intent is expressed through an Island Charter for each selected Island. An Expedition has a required planning horizon and an explainable, time-bound **Expedition lens**: it applies weights to existing Island values using that horizon and the Workspace strategy to suggest a focus order. The team can adjust the lens and final order; an override reason is recorded when the final order differs. An Expedition is sprint-like in intent but has no fixed duration or fixed size. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+A first-class, team-confirmed, evidence-seeking commitment to the one Island the team will explore next by default. Its intent is expressed through an Island Charter for each included Island. An Expedition has a required planning horizon and an explainable, time-bound **Expedition lens**: it applies weights to existing Island values using that horizon and the Workspace strategy to produce a ranked shortlist and suggest a focus order. The top Island starts selected; the team may add further Islands before creating their Charters. The team can adjust the lens and final order; an override reason is recorded when the final order differs. An Expedition is sprint-like in intent but has no fixed duration. Only one Expedition is active on a Map at a time; starting another makes the prior one past.
+
+## Expedition planning
+
+The pre-confirmation Map activity has two parts. First, the team sets its planning horizon and weighting lens without seeing Island rankings, so it can make those choices without bias from current scores. It explicitly reveals the resulting live ranking only when ready. Second, it accepts the top Island or adds more into its Expedition plan, then creates Charters and next learning actions for that selected set. Changing the lens, horizon, or Map never silently removes a selected Island; if another Island becomes top-ranked, the product makes that clear. It is not a separate durable artifact: it leads into the confirmed Expedition and its Island Charters.
 
 ## Expedition lens
 
-The time-bound weighting of existing Island evaluation categories for one Expedition. AI may propose initial weights from the planning horizon and Workspace strategy, with a visible explanation. The team owns every weight and the resulting focus order. Its snapshot preserves the horizon, weights, Island values used, suggested order, final order, and any override reason.
+The time-bound weighting of the evaluation values already configured on Islands for one Expedition. The team owns every category emphasis and the resulting focus order. Its snapshot preserves the horizon, values used, category emphasis, suggested order, final order, and any override reason. AI lens suggestions are deferred.
 
 ## Island Charter
 

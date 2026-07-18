@@ -1,0 +1,27 @@
+.ranking-next {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #d1c09a;
+}
+
+.ranking-next .primary {
+  width: 100%;
+}
+
+.planning-rank-notice {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid #9b7133;
+  background: #fff1cf;
+  color: #594b2f;
+}
+
+.planning-rank-notice .eyebrow {
+  margin-bottom: 4px;
+}
+
+.planning-rank-notice p:last-child {
+  margin: 0;
+  font-size: .78rem;
+  line-height: 1.45;
+}

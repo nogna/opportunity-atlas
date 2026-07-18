@@ -63,6 +63,75 @@ class ExpeditionTests(unittest.TestCase):
         self.assertEqual("active", second["status"])
         self.assertEqual(second["id"], atlas.current_expedition["id"])
 
+    def test_expedition_lens_suggests_order_and_preserves_the_decision_context(self):
+        atlas = workspace()
+        atlas.update_opportunity(
+            "renewal",
+            evaluation={
+                "value": {"score": 3, "rationale": "Useful but smaller."},
+                "readiness": {"score": 5, "rationale": "The material is ready."},
+                "effort": {"score": 1, "rationale": "A small trial."},
+            },
+        )
+
+        expedition = atlas.confirm_expedition(
+            charters=[
+                {"island_id": "triage", "next_learning_action": "Review alerts."},
+                {"island_id": "renewal", "next_learning_action": "Try two briefs."},
+            ],
+            planning_horizon="Next 6 weeks",
+            lens_weights={"value": 1, "readiness": 3, "effort": 2},
+        )
+
+        self.assertEqual("Next 6 weeks", expedition["planning_horizon"])
+        self.assertEqual({"value": 1, "readiness": 3, "effort": 2}, expedition["lens_weights"])
+        self.assertEqual(5, expedition["lens_inputs"]["triage"]["value"]["score"])
+        self.assertEqual(
+            ["renewal", "triage"],
+            expedition["map_snapshot"]["expedition_lens"]["suggested_focus_order"],
+        )
+        self.assertEqual(["renewal", "triage"], expedition["suggested_focus_order"])
+        self.assertEqual(expedition["suggested_focus_order"], expedition["focus_order"])
+
+    def test_changing_suggested_expedition_order_requires_a_reason(self):
+        atlas = workspace()
+        charters = [
+            {"island_id": "triage", "next_learning_action": "Review alerts."},
+            {"island_id": "renewal", "next_learning_action": "Try two briefs."},
+        ]
+        lens = {"value": 1, "readiness": 1, "effort": 1}
+
+        with self.assertRaisesRegex(ValueError, "short reason"):
+            atlas.confirm_expedition(
+                charters=charters,
+                planning_horizon="Two weeks",
+                lens_weights=lens,
+                focus_order=["renewal", "triage"],
+            )
+
+        expedition = atlas.confirm_expedition(
+            charters=charters,
+            planning_horizon="Two weeks",
+            lens_weights=lens,
+            focus_order=["renewal", "triage"],
+            override_reason="The renewal meeting is already booked.",
+        )
+        self.assertEqual("The renewal meeting is already booked.", expedition["override_reason"])
+
+    def test_expedition_rejects_empty_lens_and_non_text_override_reason(self):
+        atlas = workspace()
+        charter = [{"island_id": "triage", "next_learning_action": "Review alerts."}]
+
+        with self.assertRaisesRegex(ValueError, "cover value"):
+            atlas.confirm_expedition(charters=charter, lens_weights={})
+        with self.assertRaisesRegex(ValueError, "must be text"):
+            atlas.confirm_expedition(
+                charters=charter,
+                override_reason={"not": "text"},
+            )
+        with self.assertRaisesRegex(ValueError, "identifiers"):
+            atlas.confirm_expedition(charters=charter, focus_order=[{"bad": "input"}])
+
     def test_map_changes_compare_the_living_map_with_an_expedition_snapshot(self):
         atlas = workspace()
         expedition = atlas.confirm_expedition(

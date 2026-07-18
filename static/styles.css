@@ -285,6 +285,7 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .island-flag{position:relative;padding:18px;border:1px solid #aa9365;background:#fff9eb;box-shadow:0 8px 15px rgba(86,65,22,.08)}
 .island-flag:before{content:"ISLAND CHARTER";position:absolute;right:13px;top:13px;color:#886f45;font:8px 'DM Mono',monospace;letter-spacing:.09em}
 .island-flag h3{margin:22px 0 10px;font:600 1.42rem/1.05 Fraunces,serif}
+.island-flag--top-ranked{border:2px solid #52734d;background:linear-gradient(135deg,#fffdf2,#e7f0df);box-shadow:0 12px 24px rgba(58,91,52,.16)}.island-flag--top-ranked:before{content:"TOP RANKED";color:#3c653d}.island-flag--top-ranked header .eyebrow{color:#3c653d;font-weight:700}
 .expedition-context{padding:10px 11px;border:1px dashed #b09a6c;background:#f7efd8;color:#53604e;font-size:.72rem;line-height:1.42}
 .expedition-context p{margin:4px 0}
 .expedition-context .eyebrow{font-size:8px}

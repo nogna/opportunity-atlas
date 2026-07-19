@@ -170,8 +170,22 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .ai-compass{display:flex;justify-content:space-between;gap:20px;padding:16px;border:1px solid #9caabb;background:#edf3f7}
 .ai-compass h3{margin:0;font:600 1.08rem Fraunces,serif}
 .ai-compass p:not(.eyebrow){margin:7px 0 0;max-width:545px;font-size:.8rem!important;line-height:1.5}
-.ai-lenses{display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:flex-end;gap:7px}
-.ai-lens{border-color:#718ca3;color:#2c5a78}
+.ai-guide-list{margin:14px 0;padding:0 0 0 18px;font-size:.76rem;line-height:1.5;color:#3a5348}
+.ai-guide-list li{margin-bottom:7px}
+.ai-challenge{margin-top:16px;padding-top:14px;border-top:1px solid #adc6d8}
+.ai-challenge #challenge-island{width:100%}
+#ai-challenge-result{margin-top:12px}
+.ai-challenge-status,.ai-challenge-empty{margin:0;font-size:.78rem;color:#48607a;font-style:italic}
+.ai-challenge-error{margin:0;color:#963d32;font-size:.78rem}
+.ai-challenge-groups{display:grid;gap:12px}
+.ai-challenge-group{padding:10px 11px;border-left:3px solid #7773a4;background:rgba(233,230,247,.4)}
+.ai-challenge-group .eyebrow{margin-bottom:6px}
+.ai-challenge-group ul{margin:0;padding-left:16px;font-size:.75rem;line-height:1.45;color:#3f3a5c}
+.chart-field-pitfall{display:block;margin-top:5px;color:#8a4b1f;font-weight:600}
+.pitfall-tag{display:inline-block;margin-right:4px;font:600 8px 'DM Mono',monospace;letter-spacing:.05em;color:#a35b23}
+.chart-room-warning{margin:16px 0 0;padding:12px 14px;border-left:3px solid #b1512e;background:#fdf0e8;color:#6b3a22}
+.chart-room-warning .eyebrow{margin-bottom:4px}
+.chart-room-warning p:last-child{margin:0;font-size:.78rem;line-height:1.45}
 .chart-details{border-top:1px solid #c9b78c}
 .chart-details>.eyebrow{margin-top:17px}
 .chart-detail{border-bottom:1px solid rgba(169,145,96,.42);padding:0}
@@ -185,7 +199,6 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .chart-field.wide{grid-column:auto}
 .section-heading,.ai-compass,.chart-room-actions{display:block}
 .section-heading>p{margin-top:7px!important}
-.ai-lenses{justify-content:flex-start;margin-top:13px}
 .chart-room-actions .primary{margin-top:12px}
 .chart-detail summary{display:block}
 .chart-detail summary span{display:block;margin-top:4px}
@@ -221,14 +234,6 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .chart-workspace>.island-name-field{margin-top:22px}
 .chart-workspace .chart-core,.chart-workspace .chart-evidence-grid,.chart-workspace .chart-details{margin-top:26px}
 .chart-room-layout .ai-compass{display:block;position:sticky;top:14px;margin-top:22px}
-.ai-progress{display:grid;gap:7px;margin:18px 0;padding:0;list-style:none;font-size:.76rem;color:#566875}
-.ai-progress li{padding:7px 8px;border-left:2px solid #9fb5c7;background:rgba(255,255,255,.44)}
-.ai-progress li::before{content:'○ ';color:#477b9d}
-.ai-progress li.complete{color:#315c45;border-left-color:#4d916d}
-.ai-progress li.complete::before{content:'✓ ';color:#3b7a59}
-.ai-guidance{padding:11px;border:1px solid #adc6d8;background:rgba(255,255,255,.62)}
-.ai-guidance p:last-child{margin-bottom:0}
-.chart-room-layout .ai-lenses{justify-content:flex-start;margin-top:12px}
 .text-button{border:0;padding:0;background:transparent;color:#315d78;font:600 12px Manrope;text-decoration:underline;cursor:pointer}
 .chart-room-layout .text-button{margin-top:16px}
 .ai-compass.collapsed{align-self:start;padding:12px}

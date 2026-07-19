@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 import urllib.error
 import urllib.request
@@ -17,7 +18,7 @@ from pathlib import Path
 from collaboration import Collaboration, FieldLockedError
 from ai_suggestions import apply_suggested_weights, suggest_for_iteration
 from ranking import default_rubric, validate_rubric
-from workspace import Workspace
+from workspace import CHART_ROOM_FIELD_IDS, Workspace
 
 ROOT = Path(__file__).parent
 STATIC = ROOT / "static"
@@ -202,6 +203,111 @@ def openai_assist(use_case, workspace):
         return fallback
 
 
+CHART_ROOM_PITFALLS = (
+    "Prefer knowledge-synthesis tasks (drafting, summarizing, triage, flagging) over "
+    "judgment-heavy tasks (negotiation, hiring, strategy) for a first AI use case.",
+    "Measure a baseline before starting; without one you can't prove impact later.",
+    "Name one accountable owner; 'the team owns it' reliably predicts failure.",
+    "Redesign the workflow around AI; handing out a tool with no process change "
+    "produces no real impact.",
+    "Define kill/continue criteria up front to avoid pilot purgatory.",
+    "Concentrate depth on one process rather than spreading shallowly across many.",
+)
+
+EMPTY_ISLAND_CHALLENGE_LINES = (
+    "This Island is a blank map. Even I can't challenge nothing — write a sentence "
+    "about what's broken today, then I'll have opinions.",
+    "There's nothing here yet for me to disagree with. Give me a workflow, a change, "
+    "or an outcome, and I'll get to work.",
+    "It's Chart Room, but it's an empty Chart Room. Add a line about today's problem "
+    "and I'll come back swinging.",
+    "An Island this quiet makes a poor sparring partner. Tell me what's supposed to "
+    "change, and I'll tell you what worries me.",
+    "I can't find a hypothesis to challenge here — only a title. Sketch the workflow "
+    "or the outcome first.",
+    "Nothing ventured, nothing challenged. Write one honest sentence about the "
+    "problem, and I'll push back properly.",
+)
+
+
+def _chart_room_has_content(chart_room):
+    """True if any Chart Room field carries non-whitespace text."""
+    return any(isinstance(value, str) and value.strip() for value in (chart_room or {}).values())
+
+
+def local_empty_island_challenge():
+    """A trivial, non-network response for an Island with nothing yet to challenge."""
+    return {"source": "local", "empty": True, "message": random.choice(EMPTY_ISLAND_CHALLENGE_LINES)}
+
+
+def _challenge_instructions():
+    pitfalls = "\n".join(f"- {pitfall}" for pitfall in CHART_ROOM_PITFALLS)
+    return (
+        "You challenge one Island in an AI-opportunity Map's Chart Room. Use only the "
+        "Chart Room content, evaluation values, and Workspace North Star provided in "
+        "the input JSON. Never invent facts, evidence, or numbers not present there. "
+        "Frame everything as questions or observations, never as instructions, "
+        "rewrites, or decisions — you cannot change Island values, select Islands, "
+        "confirm an Expedition, or archive an Island. Consider these pitfalls when "
+        f"useful:\n{pitfalls}\n\n"
+        "Return exactly three labelled sections, each a short bulleted list ('- ' "
+        "prefix, one idea per line):\nMISSING:\nCHALLENGE:\nPITFALL:"
+    )
+
+
+def _parse_challenge_response(text):
+    def bullets(match):
+        if not match:
+            return []
+        return [
+            re.sub(r"^[-•]\s*", "", line).strip()
+            for line in match.group(1).strip().splitlines()
+            if line.strip()
+        ]
+
+    missing = re.search(r"MISSING:\s*(.*?)(?=\nCHALLENGE:|$)", text, re.S)
+    challenge = re.search(r"CHALLENGE:\s*(.*?)(?=\nPITFALL:|$)", text, re.S)
+    pitfall = re.search(r"PITFALL:\s*(.*)$", text, re.S)
+    return {
+        "missing_or_thin": bullets(missing),
+        "worth_challenging": bullets(challenge),
+        "common_pitfall": bullets(pitfall),
+    }
+
+
+def openai_challenge_island(chart_room, evaluation, north_star):
+    """Real GPT-5.6 challenge on team-authored Chart Room content.
+
+    Deliberately has NO local/offline fallback: unlike ``openai_assist``, a
+    missing key or a failed call must surface as a plain error, never as
+    invented local content standing in for AI's actual read of the Island.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("AI review is unavailable right now.")
+    body = json.dumps({
+        "model": "gpt-5.6",
+        "instructions": _challenge_instructions(),
+        "input": json.dumps({"chart_room": chart_room, "evaluation": evaluation, "north_star": north_star}),
+    }).encode()
+    request = urllib.request.Request(
+        "https://api.openai.com/v1/responses", data=body, method="POST",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read())
+        text = "\n".join(
+            item.get("text", "")
+            for output in result.get("output", [])
+            for item in output.get("content", [])
+            if item.get("type") == "output_text"
+        )
+        return {"source": "gpt-5.6", **_parse_challenge_response(text)}
+    except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError):
+        raise ValueError("AI review is unavailable right now.")
+
+
 class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC), **kwargs)
@@ -279,6 +385,20 @@ class AppHandler(SimpleHTTPRequestHandler):
                 return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
             if self.path == "/api/ai/suggestions":
                 return self.send_json(HTTPStatus.OK, suggest_for_iteration(load_workspace().current_iteration))
+            if self.path == "/api/ai/challenge-island":
+                workspace = load_workspace()
+                chart_room = {
+                    field_id: value
+                    for field_id, value in (payload.get("chart_room") or {}).items()
+                    if field_id in CHART_ROOM_FIELD_IDS
+                }
+                evaluation = payload.get("evaluation") or {}
+                if not isinstance(evaluation, dict):
+                    raise ValueError("Island evaluation values must be an object.")
+                if not _chart_room_has_content(chart_room):
+                    return self.send_json(HTTPStatus.OK, local_empty_island_challenge())
+                result = openai_challenge_island(chart_room, evaluation, workspace._north_star_context())
+                return self.send_json(HTTPStatus.OK, result)
             if self.path == "/api/workspace/opportunities":
                 workspace = load_workspace()
                 opportunity = workspace.add_opportunity(payload["opportunity"])

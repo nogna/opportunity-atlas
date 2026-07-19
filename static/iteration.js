@@ -25,6 +25,57 @@ const CHART_ROOM_DETAILS = [
   ['ownership_adoption', 'Ownership & adoption', 'Open when roles will change', 'Who reviews the result, who can override it, and what changes in their routine?'],
   ['learning_action', 'Next learning action', 'Open when preparing an Expedition', 'Describe the smallest action that could strengthen or weaken this hypothesis.'],
 ];
+const CHART_ROOM_PITFALL_GUIDE = [
+  'Prefer knowledge-synthesis work (drafting, triage, summarizing, flagging) over judgment-heavy work (negotiation, hiring, strategy) for a first AI use case.',
+  'Measure a baseline before you start — without one you can’t prove impact later.',
+  'Name one accountable owner. “The team owns it” reliably predicts failure.',
+  'Redesign the workflow around AI — handing out a tool with no process change produces no real impact.',
+  'Define kill/continue criteria up front, or this becomes a pilot that never ends.',
+  'Go deep on one process rather than shallow across many.',
+];
+const CHART_ROOM_FIELD_PITFALLS = {
+  workflow_problem: 'if this is really a judgment call (hiring, negotiation, strategy), that’s the highest-variance place to start.',
+  ai_change: 'judgment-heavy tasks have the highest variance — knowledge-synthesis tasks (drafting, triage, summarizing) are the safer first bet.',
+  outcome: 'an outcome no one measured before this is unfalsifiable — pair it with a baseline in Evidence.',
+  evidence: 'no baseline means you can’t prove impact later.',
+  unknowns: 'an unnamed unknown doesn’t disappear — it resurfaces later as a surprised stakeholder.',
+  workflow_sketch: 'sketching AI into today’s workflow without redesigning who does what tends to produce a tool nobody adopts.',
+  readiness_data: 'no baseline means you can’t prove impact later.',
+  safeguards_risk: 'handing out access without redesigning the workflow produces no real impact.',
+  ownership_adoption: 'no named owner predicts failure — name one person who can ship or kill this.',
+  learning_action: 'define what would make you kill this before you start, or it becomes a pilot that never ends.',
+};
+const THIN_FIELD_MIN_LENGTH = 15;
+let chartRoomWarningsTimer;
+
+function pitfallHint(fieldId) {
+  const pitfall = CHART_ROOM_FIELD_PITFALLS[fieldId];
+  return pitfall ? `<small class="chart-field-pitfall"><span class="pitfall-tag">⚠ pitfall</span> ${escapeHtml(pitfall)}</small>` : '';
+}
+
+function chartRoomWarnings(form) {
+  return CHART_ROOM_FIELDS.map(([id, label]) => {
+    const value = (form.elements[`chart-${id}`]?.value || '').trim();
+    if (!value) return {label, state: 'missing'};
+    if (value.length < THIN_FIELD_MIN_LENGTH) return {label, state: 'thin'};
+    return null;
+  }).filter(Boolean);
+}
+
+function renderChartRoomWarnings(form) {
+  const warnings = chartRoomWarnings(form);
+  const container = $('#chart-room-warnings', form);
+  if (!container) return;
+  if (!warnings.length) { container.innerHTML = ''; return; }
+  const missing = warnings.filter(w => w.state === 'missing').map(w => w.label);
+  const thin = warnings.filter(w => w.state === 'thin').map(w => w.label);
+  container.innerHTML = `<aside class="chart-room-warning" role="status"><p class="eyebrow">BEFORE THIS GOES FURTHER</p><p>${missing.length ? `Missing: ${missing.map(escapeHtml).join(', ')}. ` : ''}${thin.length ? `Very short: ${thin.map(escapeHtml).join(', ')}.` : ''} This is advisory — it won’t block saving.</p></aside>`;
+}
+
+function scheduleChartRoomWarnings(form) {
+  clearTimeout(chartRoomWarningsTimer);
+  chartRoomWarningsTimer = setTimeout(() => renderChartRoomWarnings(form), 500);
+}
 
 async function post(path, body) {
   const response = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
@@ -501,14 +552,15 @@ function openIsland(islandId) {
   if (!island) return;
   const chartRoom = chartRoomWithStartingPoint(island);
   const dialog = $('#island-dialog');
-  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header>${scoutingNoteProvenance(island)}<div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
+  dialog.innerHTML = `<form id="edit-island-form" data-island-id="${escapeHtml(island.id)}"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART ROOM · ISLAND DEEP DIVE</p><h2>${escapeHtml(island.title)}</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header>${scoutingNoteProvenance(island)}<div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" value="${escapeHtml(island.title)}"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields(island)}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section><div id="chart-room-warnings"></div></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Save Chart Room</button></footer></form>`;
   dialog.showModal();
+  const form = $('#edit-island-form');
   $('#close-dialog').addEventListener('click', () => dialog.close());
-  document.querySelectorAll('.ai-lens').forEach(button => button.addEventListener('click', () => showAiLens(button.dataset.lens)));
   $('#toggle-ai-sidecar').addEventListener('click', toggleAiSidecar);
-  document.querySelectorAll('[name^="chart-"]').forEach(field => field.addEventListener('input', updateAiProgress));
-  updateAiProgress();
-  $('#edit-island-form').addEventListener('submit', saveIsland);
+  $('#challenge-island').addEventListener('click', () => challengeIsland(form));
+  document.querySelectorAll('[name^="chart-"]').forEach(field => field.addEventListener('input', () => scheduleChartRoomWarnings(form)));
+  renderChartRoomWarnings(form);
+  form.addEventListener('submit', saveIsland);
 }
 
 function scoutingNoteProvenance(island) {
@@ -518,7 +570,30 @@ function scoutingNoteProvenance(island) {
 }
 
 function aiSidecarMarkup() {
-  return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>Guidance while you chart</h3><p>Suggestions are questions, never team content. You choose what to write, save, or ignore.</p></header><ol class="ai-progress" id="ai-progress"><li data-step="workflow_problem">Frame the workflow</li><li data-step="evidence">Separate evidence from assumptions</li><li data-step="outcome">Name a possible outcome</li><li data-step="learning_action">Choose a next learning action</li></ol><div class="ai-guidance"><p class="eyebrow">CURRENT LENS</p><p id="ai-guidance">Start with the work as it is today. What decision is delayed, and who is affected?</p></div><div class="ai-lenses"><button type="button" class="secondary ai-lens" data-lens="workflow">Workflow lens</button><button type="button" class="secondary ai-lens" data-lens="evidence">Evidence lens</button><button type="button" class="secondary ai-lens" data-lens="values">Value lens</button></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
+  return `<aside class="ai-compass" id="ai-sidecar" aria-label="Optional AI guidance"><header><p class="eyebrow">AI COMPASS · OPTIONAL</p><h3>How to frame this Island</h3></header><ul class="ai-guide-list">${CHART_ROOM_PITFALL_GUIDE.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul><div class="ai-challenge"><button type="button" class="secondary" id="challenge-island">Challenge this Island</button><div id="ai-challenge-result" aria-live="polite"></div></div><button type="button" class="text-button" id="toggle-ai-sidecar">Hide AI compass</button></aside>`;
+}
+
+function challengeIsland(form) {
+  const button = $('#challenge-island');
+  const result = $('#ai-challenge-result');
+  button.disabled = true;
+  result.innerHTML = '<p class="ai-challenge-status">Thinking…</p>';
+  post('/api/ai/challenge-island', {chart_room: chartRoomFrom(form), evaluation: evaluationFrom(form)})
+    .then(renderChallengeResult)
+    .catch(error => { result.innerHTML = `<p class="ai-challenge-error">${escapeHtml(error.message)}</p>`; })
+    .finally(() => { button.disabled = false; });
+}
+
+function renderChallengeResult(payload) {
+  const result = $('#ai-challenge-result');
+  if (payload.empty) {
+    result.innerHTML = `<p class="ai-challenge-empty">${escapeHtml(payload.message)}</p>`;
+    return;
+  }
+  const group = (label, items) => items.length
+    ? `<div class="ai-challenge-group"><p class="eyebrow">${label}</p><ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`
+    : '';
+  result.innerHTML = `<div class="ai-challenge-groups">${group('MISSING OR THIN', payload.missing_or_thin)}${group('WORTH CHALLENGING', payload.worth_challenging)}${group('COMMON PITFALL TO CONSIDER', payload.common_pitfall)}</div>`;
 }
 
 function chartRoomWithStartingPoint(island) {
@@ -532,31 +607,15 @@ function chartRoomWithStartingPoint(island) {
 }
 
 function chartRoomCoreFields(chartRoom) {
-  return CHART_ROOM_FIELDS.filter(([, , , group]) => group.startsWith('core')).map(([id, label, hint, group]) => `<label class="chart-field ${group}">${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small></label>`).join('');
+  return CHART_ROOM_FIELDS.filter(([, , , group]) => group.startsWith('core')).map(([id, label, hint, group]) => `<label class="chart-field ${group}">${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small>${pitfallHint(id)}</label>`).join('');
 }
 
 function chartEvidenceFields(chartRoom) {
-  return CHART_ROOM_FIELDS.filter(([, , , group]) => group === 'evidence').map(([id, label, hint]) => `<section class="chart-evidence ${id === 'unknowns' ? 'chart-unknowns' : ''}"><label>${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small></label></section>`).join('');
+  return CHART_ROOM_FIELDS.filter(([, , , group]) => group === 'evidence').map(([id, label, hint]) => `<section class="chart-evidence ${id === 'unknowns' ? 'chart-unknowns' : ''}"><label>${escapeHtml(label)}<textarea name="chart-${id}" maxlength="2000" placeholder="Team-authored…">${escapeHtml(chartRoom[id] || '')}</textarea><small>${escapeHtml(hint)}</small>${pitfallHint(id)}</label></section>`).join('');
 }
 
 function chartRoomDetails(chartRoom) {
-  return CHART_ROOM_DETAILS.map(([id, label, summary, hint]) => `<details class="chart-detail" ${chartRoom[id] ? 'open' : ''}><summary>${escapeHtml(label)}<span>${escapeHtml(summary)}</span></summary><label class="sr-only" for="chart-${id}">${escapeHtml(label)}</label><textarea id="chart-${id}" name="chart-${id}" maxlength="2000" placeholder="${escapeHtml(hint)}">${escapeHtml(chartRoom[id] || '')}</textarea></details>`).join('');
-}
-
-function showAiLens(lens) {
-  const guidance = {
-    workflow: 'Which delayed decision would change if this Island worked, who makes it, and what would they do differently?',
-    evidence: 'What observation, baseline, or accountable source would strengthen—or weaken—this opportunity hypothesis?',
-    values: 'Why is each value high or low? Check the rationale; only the team can change a score.',
-  };
-  $('#ai-guidance').textContent = guidance[lens];
-}
-
-function updateAiProgress() {
-  document.querySelectorAll('.ai-progress [data-step]').forEach(item => {
-    const value = document.querySelector(`[name="chart-${item.dataset.step}"]`)?.value.trim();
-    item.classList.toggle('complete', Boolean(value));
-  });
+  return CHART_ROOM_DETAILS.map(([id, label, summary, hint]) => `<details class="chart-detail" ${chartRoom[id] ? 'open' : ''}><summary>${escapeHtml(label)}<span>${escapeHtml(summary)}</span></summary><label class="sr-only" for="chart-${id}">${escapeHtml(label)}</label><textarea id="chart-${id}" name="chart-${id}" maxlength="2000" placeholder="${escapeHtml(hint)}">${escapeHtml(chartRoom[id] || '')}</textarea>${pitfallHint(id)}</details>`).join('');
 }
 
 function toggleAiSidecar() {
@@ -632,6 +691,7 @@ function chartRoomFrom(form) {
 async function saveIsland(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  renderChartRoomWarnings(form);
   try {
     form.querySelector('button[type="submit"]').disabled = true;
     await post(`/api/workspace/opportunities/${encodeURIComponent(form.dataset.islandId)}`, {title: form.elements.title.value.trim(), evaluation: evaluationFrom(form), chart_room: chartRoomFrom(form)});

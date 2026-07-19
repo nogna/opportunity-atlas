@@ -10,7 +10,7 @@ The app uses only the Python standard library.
 python3 app.py
 ```
 
-Open <http://localhost:8000>.
+Open <http://localhost:8000>. Set `PORT` to use a different port. Set `OPENAI_API_KEY` to enable live AI assistance; without it, a local guidance fallback keeps the demo runnable.
 
 Run the focused domain tests with:
 

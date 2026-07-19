@@ -4,10 +4,10 @@ from workspace import Workspace
 
 
 class WorkspaceOpportunityMapTests(unittest.TestCase):
-    def test_first_map_exposes_its_focus_strategy_context_and_generated_atlas_name(self):
+    def test_first_map_exposes_its_focus_generated_atlas_name_and_workspace_north_star(self):
         workspace = Workspace.start(
             map_focus="Improve the support experience.",
-            decision_frame={"strategy": "Helpful AI with accountable human decisions."},
+            ai_strategy="Helpful AI with accountable human decisions.",
             opportunities=[],
             dimensions=[],
             assessments={},
@@ -16,9 +16,12 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
         current = workspace.current_iteration
 
         self.assertEqual("Improve the support experience.", current.map_focus)
-        self.assertEqual("Helpful AI with accountable human decisions.", current.north_star)
+        self.assertEqual("Helpful AI with accountable human decisions.", workspace.ai_strategy)
+        self.assertIsNone(workspace.ai_vision)
         self.assertEqual("The Amber Current", current.name)
-        self.assertNotIn("north_star", workspace.to_dict()["iterations"][0])
+        serialized = workspace.to_dict()
+        self.assertEqual("Helpful AI with accountable human decisions.", serialized["ai_strategy"])
+        self.assertIsNone(serialized["ai_vision"])
         self.assertTrue(current.is_editable)
         self.assertIsNone(current.source_iteration_number)
 
@@ -251,7 +254,7 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
             "The Map remains editable after an Expedition snapshot.", updated["detail"]
         )
 
-    def test_legacy_north_star_is_migrated_to_read_only_strategy_context(self):
+    def test_legacy_per_iteration_north_star_lifts_to_workspace_level_ai_strategy(self):
         workspace = Workspace.from_dict(
             {
                 "iterations": [
@@ -267,14 +270,79 @@ class WorkspaceOpportunityMapTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual("Legacy strategy", workspace.current_iteration.north_star)
+        self.assertEqual("Legacy strategy", workspace.ai_strategy)
+        self.assertIsNone(workspace.ai_vision)
         self.assertNotIn("north_star", workspace.to_dict()["iterations"][0])
+
+    def test_legacy_decision_frame_strategy_lifts_to_workspace_level_ai_strategy(self):
+        workspace = Workspace.from_dict(
+            {
+                "iterations": [
+                    {
+                        "number": 1,
+                        "decision_frame": {"strategy": "An older single strategy string."},
+                        "opportunities": [],
+                        "dimensions": [],
+                        "assessments": {},
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual("An older single strategy string.", workspace.ai_strategy)
+        self.assertIsNone(workspace.ai_vision)
+
+    def test_workspace_level_north_star_is_not_overridden_by_stale_legacy_data(self):
+        workspace = Workspace.from_dict(
+            {
+                "iterations": [
+                    {
+                        "number": 1,
+                        "decision_frame": {"strategy": "A stale per-Iteration strategy."},
+                        "opportunities": [],
+                        "dimensions": [],
+                        "assessments": {},
+                    }
+                ],
+                "ai_vision": "The current Workspace vision.",
+                "ai_strategy": "The current Workspace strategy.",
+            }
+        )
+
+        self.assertEqual("The current Workspace vision.", workspace.ai_vision)
+        self.assertEqual("The current Workspace strategy.", workspace.ai_strategy)
+
+    def test_update_north_star_sets_fields_independently_and_rejects_blank_values(self):
+        workspace = self._workspace()
+
+        workspace.update_north_star(ai_vision="Why we use AI at all.")
+        self.assertEqual("Why we use AI at all.", workspace.ai_vision)
+        self.assertEqual("Helpful AI with accountable human decisions.", workspace.ai_strategy)
+
+        workspace.update_north_star(ai_strategy="This quarter's focus.")
+        self.assertEqual("Why we use AI at all.", workspace.ai_vision)
+        self.assertEqual("This quarter's focus.", workspace.ai_strategy)
+
+        with self.assertRaisesRegex(ValueError, "AI vision"):
+            workspace.update_north_star(ai_vision=" ")
+        with self.assertRaisesRegex(ValueError, "AI strategy"):
+            workspace.update_north_star(ai_strategy=" ")
+
+    def test_north_star_survives_a_new_iteration(self):
+        workspace = self._workspace()
+        workspace.update_north_star(ai_vision="An enduring purpose.")
+        workspace.current_iteration.next_opportunity_decision = {"opportunity_id": "legacy"}
+
+        workspace.start_next_iteration(what_changed="A new planning cycle began.")
+
+        self.assertEqual("An enduring purpose.", workspace.ai_vision)
+        self.assertEqual("Helpful AI with accountable human decisions.", workspace.ai_strategy)
 
     @staticmethod
     def _workspace():
         return Workspace.start(
             map_focus="Improve the support experience.",
-            decision_frame={"strategy": "Helpful AI with accountable human decisions."},
+            ai_strategy="Helpful AI with accountable human decisions.",
             custom_name="The Amber Current",
             opportunities=[],
             dimensions=[],

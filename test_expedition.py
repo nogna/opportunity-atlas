@@ -7,7 +7,8 @@ from workspace import Workspace
 
 def workspace():
     return Workspace.start(
-        decision_frame={"strategy": "Help teams make accountable AI choices."},
+        ai_vision="AI should make specialists faster and stay accountable.",
+        ai_strategy="Help teams make accountable AI choices.",
         custom_name="Customer Support",
         opportunities=[
             {
@@ -302,6 +303,29 @@ class ExpeditionTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "does not belong"):
             atlas.map_changes_for_expedition("expedition-not-on-this-map")
+
+    def test_confirmed_expedition_snapshot_and_lens_context_carry_ai_vision_and_strategy(self):
+        atlas = workspace()
+
+        expedition = atlas.confirm_expedition(
+            charters=[{"island_id": "triage", "next_learning_action": "Check alert candidates."}]
+        )
+
+        self.assertEqual(
+            "AI should make specialists faster and stay accountable.",
+            expedition["map_snapshot"]["ai_vision"],
+        )
+        self.assertEqual(
+            "Help teams make accountable AI choices.",
+            expedition["map_snapshot"]["ai_strategy"],
+        )
+        self.assertEqual(
+            {
+                "ai_vision": "AI should make specialists faster and stay accountable.",
+                "ai_strategy": "Help teams make accountable AI choices.",
+            },
+            expedition["lens_context"],
+        )
 
     def test_each_selected_island_needs_its_own_next_learning_action(self):
         atlas = workspace()

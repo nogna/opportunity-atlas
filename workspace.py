@@ -72,11 +72,6 @@ class Iteration:
         return self.custom_name or _ATLAS_MAP_NAMES[(self.number - 1) % len(_ATLAS_MAP_NAMES)]
 
     @property
-    def north_star(self) -> str | None:
-        """Read-only strategy context for the Map, not Map-owned data."""
-        return self.decision_frame.get("strategy")
-
-    @property
     def is_set(self) -> bool:
         return self.next_opportunity_decision is not None
 
@@ -88,6 +83,12 @@ class Iteration:
 @dataclass
 class Workspace:
     iterations: list[Iteration] = field(default_factory=list)
+    # The North Star belongs to the Workspace, not any one Map or Iteration.
+    # AI vision is the enduring centre inscription; AI strategy is the plotted
+    # course of current priorities. Either may be genuinely unset so the Map
+    # can surface that missing state rather than assuming a default.
+    ai_vision: str | None = None
+    ai_strategy: str | None = None
 
     @classmethod
     def start(
@@ -100,6 +101,8 @@ class Workspace:
         shortlist: list[str] | None = None,
         custom_name: str | None = None,
         map_focus: str | None = None,
+        ai_vision: str | None = None,
+        ai_strategy: str | None = None,
     ) -> "Workspace":
         frame = deepcopy(decision_frame or {})
         focus = map_focus if map_focus is not None else frame.get("goal")
@@ -115,8 +118,36 @@ class Workspace:
                     custom_name=custom_name,
                     map_focus=focus,
                 )
-            ]
+            ],
+            ai_vision=ai_vision,
+            ai_strategy=ai_strategy,
         )
+
+    def update_north_star(
+        self,
+        *,
+        ai_vision: str | None = None,
+        ai_strategy: str | None = None,
+    ) -> None:
+        """Update the Workspace's AI vision and/or AI strategy.
+
+        ``None`` means the caller did not change that field. Empty strings are
+        rejected so the North Star always remains understandable once a team
+        does set a value; a field the team has not set yet stays ``None`` so
+        the Map can show its non-blocking missing-context warning.
+        """
+        if ai_vision is not None:
+            if not ai_vision.strip():
+                raise ValueError("AI vision cannot be empty.")
+            self.ai_vision = ai_vision.strip()
+        if ai_strategy is not None:
+            if not ai_strategy.strip():
+                raise ValueError("AI strategy cannot be empty.")
+            self.ai_strategy = ai_strategy.strip()
+
+    def _north_star_context(self) -> dict:
+        """Read-only AI vision/strategy context, e.g. for an Expedition lens."""
+        return {"ai_vision": self.ai_vision, "ai_strategy": self.ai_strategy}
 
     @property
     def current_iteration(self) -> Iteration:
@@ -498,9 +529,9 @@ class Workspace:
 
         snapshot = {
             "name": current.name,
-            "north_star": current.north_star,
             "islands": deepcopy(current.opportunities),
             "scouting_notes": deepcopy(current.scouting_notes),
+            **self._north_star_context(),
         }
         lens_inputs = {
             island_id: deepcopy(
@@ -526,7 +557,7 @@ class Workspace:
             "planning_horizon": planning_horizon.strip(),
             "lens_weights": deepcopy(lens_weights),
             "lens_inputs": lens_inputs,
-            "lens_context": {"workspace_strategy": current.north_star},
+            "lens_context": self._north_star_context(),
             "suggested_focus_order": suggested_focus_order,
             "focus_order": list(focus_order),
             "override_reason": override_reason.strip(),
@@ -836,7 +867,11 @@ class Workspace:
         return validated
 
     def to_dict(self) -> dict:
-        return {"iterations": [asdict(iteration) for iteration in self.iterations]}
+        return {
+            "iterations": [asdict(iteration) for iteration in self.iterations],
+            "ai_vision": self.ai_vision,
+            "ai_strategy": self.ai_strategy,
+        }
 
     @classmethod
     def from_dict(cls, payload: dict) -> "Workspace":
@@ -856,4 +891,23 @@ class Workspace:
             iterations.append(Iteration(**serialized))
         if not iterations:
             raise ValueError("A Workspace requires an Iteration.")
-        return cls(iterations=iterations)
+
+        ai_vision = payload.get("ai_vision")
+        ai_strategy = payload.get("ai_strategy")
+        if ai_strategy is None:
+            # Pre-#33 Workspaces kept a single "strategy" string per Iteration
+            # (itself possibly lifted from an even older per-Iteration
+            # ``north_star`` field above). Lift the most recent non-empty one
+            # up to the genuinely Workspace-level AI strategy field. AI vision
+            # has no legacy source, so it correctly stays unset here — that is
+            # the intended "vision was never captured" state this feature
+            # needs to be able to show.
+            ai_strategy = next(
+                (
+                    iteration.decision_frame.get("strategy")
+                    for iteration in reversed(iterations)
+                    if iteration.decision_frame.get("strategy")
+                ),
+                None,
+            )
+        return cls(iterations=iterations, ai_vision=ai_vision, ai_strategy=ai_strategy)

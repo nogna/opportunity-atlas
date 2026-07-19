@@ -1,5 +1,6 @@
 let workspace;
 let mapNameSaveTimer;
+let northStarSaveTimers = {};
 let activeDestination = 'map';
 let expeditionDraft = {};
 
@@ -34,7 +35,7 @@ async function post(path, body) {
 
 function currentMap(payload) {
   const iteration = payload.iterations.at(-1);
-  return {name: payload.map.name, northStar: payload.map.north_star, islands: iteration.opportunities, scoutingNotes: iteration.scouting_notes || []};
+  return {name: payload.map.name, islands: iteration.opportunities, scoutingNotes: iteration.scouting_notes || []};
 }
 
 function evaluationSummary(island) {
@@ -71,6 +72,28 @@ function islandSummary(island, fallback) {
   return chart.workflow_problem || island.detail || island.description || island.summary || fallback;
 }
 
+function northStarWarningMarkup(payload) {
+  const status = payload.north_star || {};
+  if (!status.ai_vision_missing && !status.ai_strategy_missing) return '';
+  const missing = [
+    status.ai_vision_missing && 'AI vision',
+    status.ai_strategy_missing && 'AI strategy',
+  ].filter(Boolean).join(' and ');
+  return `<aside class="north-star-warning" role="status">
+    <div class="compass compass--muted" aria-hidden="true"><span>N</span><i></i></div>
+    <div><p class="eyebrow">NORTH STAR NOT SET</p>
+    <p>This Workspace has no ${missing} yet. AI uses these to help formulate Islands toward your goals—setting them never blocks charting or exploring.</p></div>
+    <button type="button" class="secondary" data-open-north-star>Set your North Star →</button>
+  </aside>`;
+}
+
+function wireNorthStarWarning() {
+  document.querySelectorAll('[data-open-north-star]').forEach(button => button.addEventListener('click', () => {
+    activeDestination = 'north-star';
+    render(workspace);
+  }));
+}
+
 function render(payload) {
   workspace = payload;
   document.querySelectorAll('[data-destination]').forEach(button => {
@@ -79,6 +102,10 @@ function render(payload) {
   if (activeDestination === 'map-changes') {
     $('#map-app').innerHTML = mapChangesMarkup(payload);
     $('#back-to-expedition').addEventListener('click', () => { activeDestination = 'expedition'; render(workspace); });
+    return;
+  }
+  if (activeDestination === 'north-star') {
+    renderNorthStar(payload);
     return;
   }
   if (activeDestination === 'expedition') {
@@ -91,10 +118,7 @@ function render(payload) {
       <p class="eyebrow">YOUR OPPORTUNITY MAP</p><label class="map-name-label"><span class="sr-only">Map name</span><input id="map-name" value="${escapeHtml(map.name)}" aria-label="Map name"></label>
       <p class="map-intro-copy">Chart the AI opportunities your team may explore. Open an Island to record the team's current view of its value, readiness, and effort.</p>
     </section>
-    <section class="north-star" aria-label="North Star context">
-      <div class="compass" aria-hidden="true"><span>N</span><i></i></div>
-      <div><p class="eyebrow">NORTH STAR · STRATEGIC CONTEXT</p><p class="north-star-copy">${escapeHtml(map.northStar || 'North Star context has not been set yet.')}</p></div>
-    </section>
+    ${northStarWarningMarkup(payload)}
     <section class="scouting-dock" aria-label="Personal Scouting notes">
       <div class="scouting-dock-heading"><div><p class="eyebrow">BEFORE EXPEDITION PLANNING</p><h2>Scouting notes</h2><p>Personal early signals—not yet Islands and not team evidence.</p></div><button class="secondary" id="add-scouting-note">+ Add a note</button></div>
       <div class="scouting-notes">${scoutingNotesMarkup(map.scoutingNotes)}</div>
@@ -119,6 +143,56 @@ function render(payload) {
   document.querySelectorAll('.open-transferred-island').forEach(button => button.addEventListener('click', () => openIsland(button.dataset.islandId)));
   $('#map-name').addEventListener('input', scheduleMapNameSave);
   $('#map-name').addEventListener('blur', saveMapName);
+  wireNorthStarWarning();
+}
+
+function renderNorthStar(payload) {
+  const status = payload.north_star || {};
+  $('#map-app').innerHTML = `<section class="north-star-page">
+    <header class="north-star-heading"><p class="eyebrow">WORKSPACE NORTH STAR</p>
+      <h1>Chart the direction, then the course.</h1>
+      <p>AI uses this to help your team formulate Islands. It is shared across every Map and Expedition in this Workspace—no Map duplicates or overrides it.</p>
+    </header>
+    <div class="compass-rose-layout">
+      <div class="compass-rose" aria-label="Compass rose">
+        <span class="compass-rose-direction compass-rose-direction--n">N</span>
+        <span class="compass-rose-direction compass-rose-direction--e">E</span>
+        <span class="compass-rose-direction compass-rose-direction--s">S</span>
+        <span class="compass-rose-direction compass-rose-direction--w">W</span>
+        <div class="compass-rose-centre">
+          <p class="eyebrow">AI VISION · CENTRE INSCRIPTION</p>
+          <textarea id="ai-vision-input" maxlength="2000" placeholder="Why does this team use AI, and for what enduring purpose?">${escapeHtml(status.ai_vision || '')}</textarea>
+        </div>
+      </div>
+      <aside class="north-star-course">
+        <p class="eyebrow">AI STRATEGY · PLOTTED COURSE</p>
+        <textarea id="ai-strategy-input" maxlength="2000" placeholder="Current priorities, concrete goals, focus areas, and guardrails.">${escapeHtml(status.ai_strategy || '')}</textarea>
+      </aside>
+    </div>
+  </section>`;
+  $('#ai-vision-input').addEventListener('input', () => scheduleNorthStarSave('ai_vision'));
+  $('#ai-vision-input').addEventListener('blur', () => saveNorthStarField('ai_vision'));
+  $('#ai-strategy-input').addEventListener('input', () => scheduleNorthStarSave('ai_strategy'));
+  $('#ai-strategy-input').addEventListener('blur', () => saveNorthStarField('ai_strategy'));
+}
+
+function scheduleNorthStarSave(field) {
+  clearTimeout(northStarSaveTimers[field]);
+  $('#save-status').textContent = 'Saving…';
+  northStarSaveTimers[field] = setTimeout(() => saveNorthStarField(field), 700);
+}
+
+async function saveNorthStarField(field) {
+  clearTimeout(northStarSaveTimers[field]);
+  const input = field === 'ai_vision' ? $('#ai-vision-input') : $('#ai-strategy-input');
+  const value = input.value.trim();
+  if (!value) return;
+  try {
+    await post('/api/workspace/north-star', {[field]: value});
+    $('#save-status').textContent = 'Saved';
+  } catch (error) {
+    $('#save-status').textContent = `Not saved — ${error.message}`;
+  }
 }
 
 function islandExpeditionContext(island) {
@@ -284,7 +358,7 @@ function renderExpedition(payload) {
   const ranked = rankedIds.map(id => map.islands.find(island => island.id === id));
   const visibleRanked = expeditionDraft.__showMore ? ranked : ranked.slice(0, 5);
   const rail = `<aside class="expedition-rail"><p class="eyebrow">EXPEDITION PLANNING</p><ol><li class="${phase === 'lens' ? 'is-active' : ''}">${phase === 'charter' ? '<button type="button" data-expedition-phase="lens"><span>1</span>Planning workspace</button>' : '<span>1</span>Set lens & review rankings'}</li><li class="${phase === 'charter' ? 'is-active' : ''}"><span>2</span>Charter details</li></ol></aside>`;
-  const lensMarkup = `<section class="expedition-stage"><div class="expedition-lens-stage"><section class="expedition-lens"><header><div><p class="eyebrow">1 · ${expeditionDraft.__rankingsRevealed ? 'RANKINGS REVEALED' : 'RANKING SEALED'}</p><h2>What should make an Island worth exploring now?</h2><p>Set a timebox and decide what matters before the Map reveals any Island order, score, or recommendation.</p></div></header><div class="lens-window"><label>Plan for<span class="lens-timebox"><input type="number" id="planning-window-length" min="1" value="${escapeHtml(expeditionDraft.__windowLength || 6)}"><select id="planning-window-unit"><option ${expeditionDraft.__windowUnit === 'months' ? '' : 'selected'}>weeks</option><option ${expeditionDraft.__windowUnit === 'months' ? 'selected' : ''}>months</option><option ${expeditionDraft.__windowUnit === 'quarters' ? 'selected' : ''}>quarters</option></select></span></label><label>Bound by <small>optional</small><input id="planning-bound-by" value="${escapeHtml(expeditionDraft.__boundBy || '')}" placeholder="e.g. before the autumn launch"></label></div><div class="lens-weights">${DIMENSIONS.map(([id, label, description]) => `<label>${escapeHtml(label)}<input type="range" min="0" max="5" step="1" data-lens-weight="${id}" value="${lens[id]}"><output>${lens[id]}</output><small>${escapeHtml(description)}</small></label>`).join('')}</div><footer class="lens-reveal"><p><b>${expeditionDraft.__rankingsRevealed ? 'Rankings are visible.' : 'Ranking sealed.'}</b> Changes update the result in the background.</p><button class="primary" id="reveal-ranked-islands">${expeditionDraft.__rankingsRevealed ? 'Hide ranked Islands' : 'Reveal ranked Islands →'}</button></footer></section><aside class="expedition-compass"><div class="expedition-compass-mark">✦</div><p class="eyebrow">THE COMPASS IS QUIET</p><h3>Choose deliberately.</h3><p>Your Island values will inform the later ranking. This step is only about the team’s priorities for this Expedition.</p></aside></div>${expeditionDraft.__rankingsRevealed ? selectionMarkup() : ''}</section>`;
+  const lensMarkup = `<section class="expedition-stage">${northStarWarningMarkup(payload)}<div class="expedition-lens-stage"><section class="expedition-lens"><header><div><p class="eyebrow">1 · ${expeditionDraft.__rankingsRevealed ? 'RANKINGS REVEALED' : 'RANKING SEALED'}</p><h2>What should make an Island worth exploring now?</h2><p>Set a timebox and decide what matters before the Map reveals any Island order, score, or recommendation.</p></div></header><div class="lens-window"><label>Plan for<span class="lens-timebox"><input type="number" id="planning-window-length" min="1" value="${escapeHtml(expeditionDraft.__windowLength || 6)}"><select id="planning-window-unit"><option ${expeditionDraft.__windowUnit === 'months' ? '' : 'selected'}>weeks</option><option ${expeditionDraft.__windowUnit === 'months' ? 'selected' : ''}>months</option><option ${expeditionDraft.__windowUnit === 'quarters' ? 'selected' : ''}>quarters</option></select></span></label><label>Bound by <small>optional</small><input id="planning-bound-by" value="${escapeHtml(expeditionDraft.__boundBy || '')}" placeholder="e.g. before the autumn launch"></label></div><div class="lens-weights">${DIMENSIONS.map(([id, label, description]) => `<label>${escapeHtml(label)}<input type="range" min="0" max="5" step="1" data-lens-weight="${id}" value="${lens[id]}"><output>${lens[id]}</output><small>${escapeHtml(description)}</small></label>`).join('')}</div><footer class="lens-reveal"><p><b>${expeditionDraft.__rankingsRevealed ? 'Rankings are visible.' : 'Ranking sealed.'}</b> Changes update the result in the background.</p><button class="primary" id="reveal-ranked-islands">${expeditionDraft.__rankingsRevealed ? 'Hide ranked Islands' : 'Reveal ranked Islands →'}</button></footer></section><aside class="expedition-compass"><div class="expedition-compass-mark">✦</div><p class="eyebrow">THE COMPASS IS QUIET</p><h3>Choose deliberately.</h3><p>Your Island values will inform the later ranking. This step is only about the team’s priorities for this Expedition.</p></aside></div>${expeditionDraft.__rankingsRevealed ? selectionMarkup() : ''}</section>`;
   function selectionMarkup() {
     return `<section class="expedition-stage"><section class="expedition-ranking"><header><div><p class="eyebrow">RANKED SHORTLIST</p><h2>What rises to the surface?</h2><p>These results use the weights you just set and the values recorded on each Island.</p></div><b>${ranked.length} ranked</b></header>${planningRankNotice(ranked, selectedIds)}<div class="ranked-islands">${visibleRanked.map((island, index) => `<article class="ranked-island ${index === 0 ? 'ranked-island--top' : ''}"><span>${index + 1}</span><div><b>${escapeHtml(island.title)}</b><small>${escapeHtml(island.summary || island.description || 'Prepared Island')}</small></div><div><em>${expeditionLensScore(island, lens).toFixed(1)}</em><button class="secondary" data-select-island="${escapeHtml(island.id)}">${selectedIds.includes(island.id) ? 'Remove' : index === 0 ? 'Accept recommended Island' : 'Add'}</button></div></article>`).join('')}</div>${!expeditionDraft.__showMore && ranked.length > 5 ? '<button class="text-button" id="show-more-ranked">Show more ranked Islands</button>' : ''}<footer class="ranking-next"><button class="primary" id="continue-to-charters" ${selected.length ? '' : 'disabled'}>Continue to Charter details →</button></footer></section></section>`;
   }
@@ -325,6 +399,7 @@ function renderExpedition(payload) {
   $('#continue-to-charters')?.addEventListener('click', () => { expeditionDraft.__phase = 'charter'; render(workspace); });
   $('#back-to-selection')?.addEventListener('click', () => { expeditionDraft.__phase = 'lens'; expeditionDraft.__rankingsRevealed = true; render(workspace); });
   $('#confirm-expedition')?.addEventListener('click', confirmExpedition);
+  wireNorthStarWarning();
 }
 
 function updateExpeditionControls() {

@@ -52,9 +52,8 @@ DEFAULT_PORTFOLIO = {
 def _seeded_workspace() -> Workspace:
     """Build the open first Opportunity Map shown on a fresh Workspace."""
     return Workspace.start(
-        decision_frame={
-            "strategy": "Helpful AI that strengthens customer trust and keeps human decisions accountable.",
-        },
+        ai_vision="AI should make specialists faster and more confident without ever making a customer-facing decision unaccountable.",
+        ai_strategy="This quarter: reduce repetitive support work and strengthen the evidence behind renewal and onboarding decisions, while keeping every AI-assisted step reviewable by a person.",
         map_focus="Find AI-assisted ways to improve customer response quality while protecting specialist time.",
         opportunities=[
             {
@@ -130,8 +129,13 @@ def workspace_payload(workspace: Workspace) -> dict:
     payload["map"] = {
         "name": current.name,
         "focus": current.map_focus,
-        "north_star": current.north_star,
         "is_editable": current.is_editable,
+    }
+    payload["north_star"] = {
+        "ai_vision": workspace.ai_vision,
+        "ai_strategy": workspace.ai_strategy,
+        "ai_vision_missing": not bool(workspace.ai_vision),
+        "ai_strategy_missing": not bool(workspace.ai_strategy),
     }
     payload["expedition"] = workspace.current_expedition
     if payload["expedition"] is not None:
@@ -262,6 +266,14 @@ class AppHandler(SimpleHTTPRequestHandler):
                 workspace.update_current_map(
                     map_focus=payload.get("focus"),
                     name=payload.get("name"),
+                )
+                save_workspace(workspace)
+                return self.send_json(HTTPStatus.OK, workspace_payload(workspace))
+            if self.path == "/api/workspace/north-star":
+                workspace = load_workspace()
+                workspace.update_north_star(
+                    ai_vision=payload.get("ai_vision"),
+                    ai_strategy=payload.get("ai_strategy"),
                 )
                 save_workspace(workspace)
                 return self.send_json(HTTPStatus.OK, workspace_payload(workspace))

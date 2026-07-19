@@ -36,3 +36,7 @@ To reset a locally changed demo Workspace, stop the server and remove `data/work
 The app’s AI assistance is intentionally review-first: it helps articulate an AI use case and surface missing context, but never writes team evidence, evaluation values, or Expedition choices without explicit team action. The implementation uses the OpenAI Responses API and `gpt-5.6` when an API key is available; without one, a labelled local guidance fallback keeps the demo runnable. Codex was used to research, design, prototype, implement, test, and review the application.
 
 See `docs/research/openai-build-week.md` for the remaining hackathon submission requirements.
+
+## Hackathon submission
+
+`/feedback` Codex Session ID for the Project thread where the majority of core functionality was built: `019f61c5-f40d-7492-8174-4416884001e6`

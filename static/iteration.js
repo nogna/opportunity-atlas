@@ -146,28 +146,39 @@ function render(payload) {
   wireNorthStarWarning();
 }
 
+const COMPASS_ARTWORK = `<svg class="north-star-art" viewBox="0 0 100 100" aria-hidden="true">
+  <circle cx="50" cy="50" r="34" fill="none" stroke="currentColor" stroke-width="1.4"/>
+  <line x1="50" y1="10" x2="50" y2="18" stroke="currentColor" stroke-width="1.4"/>
+  <line x1="50" y1="82" x2="50" y2="90" stroke="currentColor" stroke-width="1.4"/>
+  <line x1="10" y1="50" x2="18" y2="50" stroke="currentColor" stroke-width="1.4"/>
+  <line x1="82" y1="50" x2="90" y2="50" stroke="currentColor" stroke-width="1.4"/>
+  <path d="M50 24 L58 50 L50 76 L42 50 Z" fill="currentColor" opacity=".85"/>
+</svg>`;
+const COURSE_ARTWORK = `<svg class="north-star-art" viewBox="0 0 100 100" aria-hidden="true">
+  <circle cx="14" cy="78" r="3" fill="currentColor"/>
+  <path d="M14 78 C 34 78, 30 30, 68 26" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="4 5" stroke-linecap="round"/>
+  <line x1="80" y1="16" x2="92" y2="28" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  <line x1="92" y1="16" x2="80" y2="28" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
 function renderNorthStar(payload) {
   const status = payload.north_star || {};
   $('#map-app').innerHTML = `<section class="north-star-page">
     <header class="north-star-heading"><p class="eyebrow">WORKSPACE NORTH STAR</p>
-      <h1>Chart the direction, then the course.</h1>
-      <p>AI uses this to help your team formulate Islands. It is shared across every Map and Expedition in this Workspace—no Map duplicates or overrides it.</p>
+      <h1>Your direction, then your course.</h1>
+      <p>Shared across every Map and Expedition in this Workspace—no Map duplicates or overrides it.</p>
     </header>
-    <div class="compass-rose-layout">
-      <div class="compass-rose" aria-label="Compass rose">
-        <span class="compass-rose-direction compass-rose-direction--n">N</span>
-        <span class="compass-rose-direction compass-rose-direction--e">E</span>
-        <span class="compass-rose-direction compass-rose-direction--s">S</span>
-        <span class="compass-rose-direction compass-rose-direction--w">W</span>
-        <div class="compass-rose-centre">
-          <p class="eyebrow">AI VISION · CENTRE INSCRIPTION</p>
-          <textarea id="ai-vision-input" maxlength="2000" placeholder="Why does this team use AI, and for what enduring purpose?">${escapeHtml(status.ai_vision || '')}</textarea>
-        </div>
+    <div class="north-star-fields">
+      <div class="north-star-field">
+        ${COMPASS_ARTWORK}
+        <p class="eyebrow">AI vision</p>
+        <textarea id="ai-vision-input" maxlength="2000" placeholder="Why does this team use AI, and for what enduring purpose?">${escapeHtml(status.ai_vision || '')}</textarea>
       </div>
-      <aside class="north-star-course">
-        <p class="eyebrow">AI STRATEGY · PLOTTED COURSE</p>
+      <div class="north-star-field">
+        ${COURSE_ARTWORK}
+        <p class="eyebrow">AI strategy</p>
         <textarea id="ai-strategy-input" maxlength="2000" placeholder="Current priorities, concrete goals, focus areas, and guardrails.">${escapeHtml(status.ai_strategy || '')}</textarea>
-      </aside>
+      </div>
     </div>
   </section>`;
   $('#ai-vision-input').addEventListener('input', () => scheduleNorthStarSave('ai_vision'));

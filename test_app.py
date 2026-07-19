@@ -55,12 +55,26 @@ class PortfolioTests(unittest.TestCase):
         self.assertNotIn("north_star", current)
         self.assertEqual("Customer Support", payload["map"]["name"])
         self.assertEqual(current["map_focus"], payload["map"]["focus"])
-        self.assertEqual(current["decision_frame"]["strategy"], payload["map"]["north_star"])
+        self.assertNotIn("north_star", payload["map"])
+        self.assertTrue(payload["north_star"]["ai_vision"])
+        self.assertTrue(payload["north_star"]["ai_strategy"])
+        self.assertFalse(payload["north_star"]["ai_vision_missing"])
+        self.assertFalse(payload["north_star"]["ai_strategy_missing"])
         self.assertTrue(payload["map"]["is_editable"])
         self.assertEqual(
             3,
             len(current["opportunities"]),
         )
+
+    def test_workspace_payload_flags_missing_ai_vision_and_strategy(self):
+        workspace = app.Workspace.from_dict(app.DEFAULT_WORKSPACE.to_dict())
+        workspace.ai_vision = None
+        workspace.ai_strategy = None
+
+        payload = app.workspace_payload(workspace)
+
+        self.assertTrue(payload["north_star"]["ai_vision_missing"])
+        self.assertTrue(payload["north_star"]["ai_strategy_missing"])
 
     def test_workspace_seed_has_several_islands_with_visible_team_values(self):
         current = app.DEFAULT_WORKSPACE.current_iteration

@@ -22,12 +22,13 @@ python3 -m unittest -v
 
 The app opens a seeded Workspace, so this path needs no account or data entry:
 
-1. Check the **North Star** destination: the Workspace's AI vision (its enduring centre inscription) and AI strategy (its plotted course of current priorities). It is shared across the whole Workspace; a Map never duplicates it, and shows a non-blocking warning if either is missing.
-2. Start on the living **Map**. Each Island is an AI opportunity with visible value, readiness, and effort.
-3. Open an **Island** and use its **Chart Room** to capture the current workflow, possible AI-enabled change, outcome, team evidence, unknowns, and explained evaluation values. The AI Compass is guidance only.
-4. Optionally add a personal **Scouting note**, then explicitly chart it as an Island when the team is ready.
-5. Open **Expedition**, select prepared Islands, set a planning horizon, and give each an **Island Charter** with its next learning action. The suggested lens and focus order use the Islands’ values and the Workspace North Star; the team can adjust either, recording a reason for an order override. Confirming saves this decision and a Map snapshot.
-6. Keep the Map living. **Compare Map changes** later to see added Notes and Islands, changed values, and any new unselected Island that now outranks a selected one. The Expedition is never changed automatically.
+1. Check the **North Star** destination: the Workspace's AI vision (its enduring centre inscription) and AI strategy (its plotted course of current priorities). It is shared across the whole Workspace.
+1. Start on the living **Map**. Each Island is an AI opportunity.
+    * _If you dont want to charter an **Island** when you create it you can just add a personal **Scouting note** on the map, then explicitly chart it as an Island when the team is ready._
+1. Click on an **Island** on the map to use its **Chart Room**. There you can  capture the current workflow, possible AI-enabled change, outcome, team evidence, unknowns, and explained evaluation values. 
+1. Open **Expedition**, set a planning horizon and set how the different demensions should be weighted. Once you have set the weights, show the **Islands** rankings, select what islands you want included in the **Expedition**
+1. The Map is a living enitiy can while the **Expedition** is ongoing more **Islands** can pop up as well as **Scouting notes**. **Compare Map changes** later to see added Notes and Islands, changed values, and any new unselected Island that now outranks a selected one.
+
 
 To reset a locally changed demo Workspace, stop the server and remove `data/workspace.json`; the next launch recreates the seed.
 

@@ -112,7 +112,7 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .island--southwest{bottom:84px;left:15%;transform:rotate(-13deg) scale(1.03)}
 .island--southeast{bottom:78px;right:12%;transform:rotate(12deg) scale(.87)}
 .island--centre{top:245px;left:calc(50% - 95px);transform:rotate(11deg) scale(1.1)}
-.add-island{position:absolute;z-index:3;top:calc(50% - 22px);left:calc(50% - 107px);display:flex;gap:8px;align-items:center;border:1px solid #5e754b;background:#f5edcc;color:#314c32;border-radius:3px;padding:10px 14px;font:600 12px Manrope;box-shadow:0 4px 0 #bfa66a;cursor:pointer}
+.add-island{position:absolute;z-index:3;bottom:17px;right:23px;display:flex;gap:8px;align-items:center;border:1px solid #5e754b;background:#f5edcc;color:#314c32;border-radius:3px;padding:10px 14px;font:600 12px Manrope;box-shadow:0 4px 0 #bfa66a;cursor:pointer}
 .add-island:hover{background:#fff7db}
 .add-island span{font:500 22px Fraunces;line-height:.5}
 .map-hint{position:absolute;bottom:17px;left:23px;max-width:235px;color:#54756e;font-size:.72rem;line-height:1.4;margin:0}
@@ -146,6 +146,7 @@ body{margin:0;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:v
 .island--centre{top:285px;left:calc(50% - 75px)}
 .island-note{font-size:8px}
 .map-hint{right:16px;bottom:14px}
+.add-island{left:16px;right:auto;bottom:14px}
 .board-label{left:15px;right:15px}
 .island-dialog form{padding:27px 22px}
 }

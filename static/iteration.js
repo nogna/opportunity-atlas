@@ -531,11 +531,20 @@ async function saveMapName() {
 }
 
 function openAddIsland() {
+  // Chart an Island now opens the Chart Room directly, rather than a small
+  // name+description dialog — the Island is only created once this form is
+  // submitted (see addIsland).
+  const chartRoom = {};
   const dialog = $('#island-dialog');
-  dialog.innerHTML = `<form id="add-island-form"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><p class="eyebrow">CHART A NEW ISLAND</p><h2>Add an Island</h2><p class="dialog-intro">Give the Map a clear starting point. You can add the team's core view and values immediately, or return to it later.</p><label>Island name<input name="title" required maxlength="120" placeholder="e.g. Help agents find the right answer faster"></label><label>Initial description<textarea name="description" required maxlength="500" placeholder="A problem, workflow, or AI opportunity the team wants to explore…"></textarea></label><p class="form-error" id="form-error" role="alert"></p><button class="primary" type="submit">Add to this Map</button></form>`;
+  dialog.innerHTML = `<form id="add-island-form"><button type="button" class="dialog-close" id="close-dialog" aria-label="Close">×</button><header class="chart-room-heading"><p class="eyebrow">CHART A NEW ISLAND</p><h2>New Island</h2><p>Develop a credible opportunity through team-authored material, not a mandatory business case.</p></header><div class="chart-room-layout"><main class="chart-workspace"><label class="island-name-field">Island name<input name="title" required maxlength="120" placeholder="e.g. Help agents find the right answer faster"></label><section class="chart-core"><div class="section-heading"><div><p class="eyebrow">CORE CHART · TEAM AUTHORED</p><h3>Opportunity hypothesis</h3></div><p>Enough to make this Island inspectable.</p></div><div class="chart-core-grid">${chartRoomCoreFields(chartRoom)}</div></section><section class="chart-evidence-grid">${chartEvidenceFields(chartRoom)}</section><section class="evaluation-section"><div class="section-heading"><div><p class="eyebrow">MAP COMPARISON VALUES · TEAM SETS THESE</p><h3>How this Island currently compares</h3></div><p>Visible, adjustable, and explained here—not an Expedition ranking.</p></div>${evaluationFields({})}</section><section class="chart-details"><p class="eyebrow">DEEPER CHARTING · ONLY WHEN USEFUL</p>${chartRoomDetails(chartRoom)}</section><div id="chart-room-warnings"></div></main>${aiSidecarMarkup()}</div><p class="form-error" id="form-error" role="alert"></p><footer class="chart-room-actions"><p>Only team-authored material is saved. AI guidance remains a prompt.</p><button class="primary" type="submit">Add to this Map</button></footer></form>`;
   dialog.showModal();
+  const form = $('#add-island-form');
   $('#close-dialog').addEventListener('click', () => dialog.close());
-  $('#add-island-form').addEventListener('submit', addIsland);
+  $('#toggle-ai-sidecar').addEventListener('click', toggleAiSidecar);
+  $('#challenge-island').addEventListener('click', () => challengeIsland(form));
+  document.querySelectorAll('[name^="chart-"]').forEach(field => field.addEventListener('input', () => scheduleChartRoomWarnings(form)));
+  renderChartRoomWarnings(form);
+  form.addEventListener('submit', addIsland);
 }
 
 function evaluationFields(island) {
@@ -627,10 +636,15 @@ function toggleAiSidecar() {
 async function addIsland(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const values = Object.fromEntries(new FormData(form));
+  renderChartRoomWarnings(form);
   try {
     form.querySelector('button[type="submit"]').disabled = true;
-    await post('/api/workspace/opportunities', {opportunity: {id: `island-${Date.now()}`, title: values.title.trim(), description: values.description.trim()}});
+    const title = form.elements.title.value.trim();
+    const opportunity = await post('/api/workspace/opportunities', {opportunity: {id: `island-${Date.now()}`, title}});
+    await post(`/api/workspace/opportunities/${encodeURIComponent(opportunity.opportunity.id)}`, {
+      evaluation: evaluationFrom(form),
+      chart_room: chartRoomFrom(form),
+    });
     $('#island-dialog').close();
     await loadWorkspace();
   } catch (error) {

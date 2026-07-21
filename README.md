@@ -2,6 +2,8 @@
 
 Opportunity Atlas is a Python web app for discovering, shaping, evaluating, and prioritizing AI use cases as a shared decision artifact.
 
+**Track:** Work & Productivity. It helps a team turn a pile of AI ideas into one evidence-backed next opportunity to pursue, without a spreadsheet or a black-box ranking.
+
 ## Run locally
 
 The app uses only the Python standard library.
@@ -10,7 +12,7 @@ The app uses only the Python standard library.
 python3 app.py
 ```
 
-Open <http://localhost:8000>.
+Open <http://localhost:8000>. Set `PORT` to use a different port. Set `OPENAI_API_KEY` to enable live AI assistance; without it, a local guidance fallback keeps the demo runnable.
 
 Run the focused domain tests with:
 
@@ -35,17 +37,14 @@ To reset a locally changed demo Workspace, stop the server and remove `data/work
 ## OpenAI and Codex
 
 ### In development
-I used codex with gpt-5.6 throughout development and in combination with Matt Pollcock skills to help me navigate my own thoughts and ideas to a more clear product. As I have not used codex previously nor Matt skills I thought it was a really good exercise to work in this way. Both the prototyping and agent interace was really sweet and helped a lot when doing design descions.
+I used codex with gpt-5.6 throughout development and in combination with Matt Pollcock skills to help me navigate my own thoughts and ideas to a more clear product. As I have not used codex previously nor Matt skills I thought it was a really good exercise to work in this way. Both the prototyping and agent interace was really sweet and helped a lot when doing design descions. 
 
 ### In app
-The app’s AI assistance is intentionally review-first: it helps articulate an AI use case and surface missing context. It should be the human(s) in charge and get guidance and help from the AI. The implementation uses the OpenAI Responses API and `gpt-5.6` when an API key is available; without one, a labelled local guidance fallback keeps the demo runnable. 
-
+The app’s AI assistance is intentionally review-first: it helps articulate an AI use case and surface missing context. It should be the human(s) in charge and get guidance and help from the AI. The implementation uses the OpenAI Responses API and `gpt-5.6-terra` when an API key is available; without one, a labelled local guidance fallback keeps the demo runnable.
 
 ## Hackathon submission
 
 `/feedback` Codex Session ID for the Project thread where the majority of core functionality was built: `019f61c5-f40d-7492-8174-4416884001e6`
-
-
 
 ### For models developing
 See `docs/research/openai-build-week.md` for the remaining hackathon submission requirements.

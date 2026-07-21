@@ -188,7 +188,7 @@ def openai_assist(use_case, workspace):
     if not api_key:
         return local_assist(use_case)
     instructions = "You improve an AI use-case portfolio entry. Return exactly two short paragraphs labelled REWRITE: and GAPS:. Do not make strategic decisions or invent facts."
-    body = json.dumps({"model": "gpt-5.6", "instructions": instructions, "input": json.dumps({"workspace_context": workspace, "use_case": use_case})}).encode()
+    body = json.dumps({"model": "gpt-5.6-terra", "instructions": instructions, "input": json.dumps({"workspace_context": workspace, "use_case": use_case})}).encode()
     request = urllib.request.Request("https://api.openai.com/v1/responses", data=body, method="POST", headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
@@ -196,7 +196,7 @@ def openai_assist(use_case, workspace):
         text = "\n".join(item.get("text", "") for output in result.get("output", []) for item in output.get("content", []) if item.get("type") == "output_text")
         rewrite = re.search(r"REWRITE:\s*(.*?)(?=\nGAPS:|$)", text, re.S)
         gaps = re.search(r"GAPS:\s*(.*)$", text, re.S)
-        return {"source": "gpt-5.6", "rewrite": rewrite.group(1).strip() if rewrite else text.strip(), "gaps": gaps.group(1).strip() if gaps else "Review the proposed wording with the group."}
+        return {"source": "gpt-5.6-terra", "rewrite": rewrite.group(1).strip() if rewrite else text.strip(), "gaps": gaps.group(1).strip() if gaps else "Review the proposed wording with the group."}
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as error:
         fallback = local_assist(use_case)
         fallback["gaps"] += f" (The API was unavailable: {error}.)"
@@ -286,7 +286,7 @@ def openai_challenge_island(chart_room, evaluation, north_star):
     if not api_key:
         raise ValueError("AI review is unavailable right now.")
     body = json.dumps({
-        "model": "gpt-5.6",
+        "model": "gpt-5.6-terra",
         "instructions": _challenge_instructions(),
         "input": json.dumps({"chart_room": chart_room, "evaluation": evaluation, "north_star": north_star}),
     }).encode()
@@ -303,7 +303,7 @@ def openai_challenge_island(chart_room, evaluation, north_star):
             for item in output.get("content", [])
             if item.get("type") == "output_text"
         )
-        return {"source": "gpt-5.6", **_parse_challenge_response(text)}
+        return {"source": "gpt-5.6-terra", **_parse_challenge_response(text)}
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError, KeyError):
         raise ValueError("AI review is unavailable right now.")
 
